@@ -18,6 +18,8 @@ func NewServer(client *github.Client) *server.MCPServer {
 		"github-mcp-server",
 		"0.0.1",
 		server.WithResourceCapabilities(true, true),
+		server.WithPromptCapabilities(true),
+		server.WithToolCapabilities(true),
 		server.WithLogging())
 
 	// Add GitHub tools - Issues
@@ -50,6 +52,10 @@ func NewServer(client *github.Client) *server.MCPServer {
 
 	// Add GitHub tools - Users
 	s.AddTool(getMe(client))
+
+	// Add github_me prompt handler
+	prompt, handler := NewMePrompt(client)
+	s.AddPrompt(prompt, handler)
 
 	return s
 }
