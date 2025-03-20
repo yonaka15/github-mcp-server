@@ -334,7 +334,6 @@ Lots of things!
 Missing tools:
 
 - push_files (files array)
-- list_issues (labels array)
 - update_issue (labels and assignees arrays)
 - create_pull_request_review (comments array)
 
