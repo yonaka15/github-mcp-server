@@ -22,12 +22,33 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
   - `repo`: Repository name (string, required)
   - `issue_number`: Issue number (number, required)
 
+- **create_issue** - Create a new issue in a GitHub repository
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `title`: Issue title (string, required)
+  - `body`: Issue body content (string, optional)
+  - `assignees`: Comma-separated list of usernames to assign to this issue (string, optional)
+  - `labels`: Comma-separated list of labels to apply to this issue (string, optional)
+
 - **add_issue_comment** - Add a comment to an issue
 
   - `owner`: Repository owner (string, required)
   - `repo`: Repository name (string, required)
   - `issue_number`: Issue number (number, required)
   - `body`: Comment text (string, required)
+
+- **list_issues** - List and filter repository issues
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `state`: Filter by state ('open', 'closed', 'all') (string, optional)
+  - `labels`: Comma-separated list of labels to filter by (string, optional)
+  - `sort`: Sort by ('created', 'updated', 'comments') (string, optional)
+  - `direction`: Sort direction ('asc', 'desc') (string, optional)
+  - `since`: Filter by date (ISO 8601 timestamp) (string, optional)
+  - `page`: Page number (number, optional)
+  - `per_page`: Results per page (number, optional)
 
 - **search_issues** - Search for issues and pull requests
   - `query`: Search query (string, required)
@@ -181,6 +202,59 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
   - `state`: Alert state (string, optional)
   - `severity`: Alert severity (string, optional)
 
+## Resources
+
+### Repository Content
+
+- **Get Repository Content**  
+  Retrieves the content of a repository at a specific path.
+
+  - **Template**: `repo://{owner}/{repo}/contents{/path*}`
+  - **Parameters**:
+    - `owner`: Repository owner (string, required)
+    - `repo`: Repository name (string, required)
+    - `path`: File or directory path (string, optional)
+
+- **Get Repository Content for a Specific Branch**  
+  Retrieves the content of a repository at a specific path for a given branch.
+
+  - **Template**: `repo://{owner}/{repo}/refs/heads/{branch}/contents{/path*}`
+  - **Parameters**:
+    - `owner`: Repository owner (string, required)
+    - `repo`: Repository name (string, required)
+    - `branch`: Branch name (string, required)
+    - `path`: File or directory path (string, optional)
+
+- **Get Repository Content for a Specific Commit**  
+  Retrieves the content of a repository at a specific path for a given commit.
+
+  - **Template**: `repo://{owner}/{repo}/sha/{sha}/contents{/path*}`
+  - **Parameters**:
+    - `owner`: Repository owner (string, required)
+    - `repo`: Repository name (string, required)
+    - `sha`: Commit SHA (string, required)
+    - `path`: File or directory path (string, optional)
+
+- **Get Repository Content for a Specific Tag**  
+  Retrieves the content of a repository at a specific path for a given tag.
+
+  - **Template**: `repo://{owner}/{repo}/refs/tags/{tag}/contents{/path*}`
+  - **Parameters**:
+    - `owner`: Repository owner (string, required)
+    - `repo`: Repository name (string, required)
+    - `tag`: Tag name (string, required)
+    - `path`: File or directory path (string, optional)
+
+- **Get Repository Content for a Specific Pull Request**  
+  Retrieves the content of a repository at a specific path for a given pull request.
+
+  - **Template**: `repo://{owner}/{repo}/refs/pull/{pr_number}/head/contents{/path*}`
+  - **Parameters**:
+    - `owner`: Repository owner (string, required)
+    - `repo`: Repository name (string, required)
+    - `pr_number`: Pull request number (string, required)
+    - `path`: File or directory path (string, optional)
+
 ## Standard input/output server
 
 ```sh
@@ -214,9 +288,39 @@ GitHub MCP Server running on stdio
 
 ```
 
+## i18n / Overriding descriptions
+
+The descriptions of the tools can be overridden by creating a github-mcp-server.json file in the same directory as the binary.
+The file should contain a JSON object with the tool names as keys and the new descriptions as values.
+For example:
+
+```json
+{
+  "TOOL_ADD_ISSUE_COMMENT_DESCRIPTION": "an alternative description",
+  "TOOL_CREATE_BRANCH_DESCRIPTION": "Create a new branch in a GitHub repository"
+}
+```
+
+You can create an export of the current translations by running the binary with the `--export-translations` flag.
+This flag will preserve any translations/overrides you have made, while adding any new translations that have been added to the binary since the last time you exported.
+
+```sh
+./github-mcp-server --export-translations
+cat github-mcp-server.json
+```
+
+You can also use ENV vars to override the descriptions. The environment variable names are the same as the keys in the JSON file,
+prefixed with `GITHUB_MCP_` and all uppercase.
+
+For example, to override the `TOOL_ADD_ISSUE_COMMENT_DESCRIPTION` tool, you can set the following environment variable:
+
+```sh
+export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description"
+```
+
 ## Testing on VS Code Insiders
 
-First of all, install `github-mcp-server`  with:
+First of all, install `github-mcp-server` with:
 
 ```bash
 go install ./cmd/github-mcp-server
@@ -257,7 +361,6 @@ Try something like the following prompt to verify that it works:
 I'd like to know more about my GitHub profile.
 ```
 
-
 ## TODO
 
 Lots of things!
@@ -265,16 +368,14 @@ Lots of things!
 Missing tools:
 
 - push_files (files array)
-- create_issue (assignees and labels arrays)
 - list_issues (labels array)
 - update_issue (labels and assignees arrays)
 - create_pull_request_review (comments array)
 
 Testing
 
-- Unit tests
 - Integration tests
-- Blackbox testing: ideally comparing output to Anthromorphic's server to make sure that this is a fully compatible drop-in replacement.
+- Blackbox testing: ideally comparing output to Anthropic's server to make sure that this is a fully compatible drop-in replacement.
 
 And some other stuff:
 

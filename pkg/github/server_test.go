@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/github/github-mcp-server/pkg/translations"
 	"github.com/google/go-github/v69/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ import (
 func Test_GetMe(t *testing.T) {
 	// Verify tool definition
 	mockClient := github.NewClient(nil)
-	tool, _ := getMe(mockClient)
+	tool, _ := getMe(mockClient, translations.NullTranslationHelper)
 
 	assert.Equal(t, "get_me", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -95,7 +96,7 @@ func Test_GetMe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := getMe(client)
+			_, handler := getMe(client, translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -163,6 +164,67 @@ func Test_IsAcceptedError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := isAcceptedError(tc.err)
 			assert.Equal(t, tc.expectAccepted, result)
+		})
+	}
+}
+
+func Test_ParseCommaSeparatedList(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "simple comma separated values",
+			input:    "one,two,three",
+			expected: []string{"one", "two", "three"},
+		},
+		{
+			name:     "values with spaces",
+			input:    "one, two, three",
+			expected: []string{"one", "two", "three"},
+		},
+		{
+			name:     "values with extra spaces",
+			input:    "  one  ,  two  ,  three  ",
+			expected: []string{"one", "two", "three"},
+		},
+		{
+			name:     "empty values in between",
+			input:    "one,,three",
+			expected: []string{"one", "three"},
+		},
+		{
+			name:     "only spaces",
+			input:    " , , ",
+			expected: []string{},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "single value",
+			input:    "one",
+			expected: []string{"one"},
+		},
+		{
+			name:     "trailing comma",
+			input:    "one,two,",
+			expected: []string{"one", "two"},
+		},
+		{
+			name:     "leading comma",
+			input:    ",one,two",
+			expected: []string{"one", "two"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := parseCommaSeparatedList(tc.input)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
