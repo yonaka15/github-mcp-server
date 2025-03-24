@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/github/github-mcp-server/pkg/github"
@@ -133,13 +134,19 @@ func runStdioServer(readOnly bool, logger *log.Logger, logCommands bool, exportT
 	// Start listening for messages
 	errC := make(chan error, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Errorf("panic occurred: %v\n stack trace:\n%s", r, debug.Stack())
+				errC <- fmt.Errorf("panic: %v", r)
+			}
+		}()
+
 		in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)
 
 		if logCommands {
 			loggedIO := iolog.NewIOLogger(in, out, logger)
 			in, out = loggedIO, loggedIO
 		}
-
 		errC <- stdioServer.Listen(ctx, in, out)
 	}()
 
