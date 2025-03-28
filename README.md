@@ -237,7 +237,7 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
 
 ### Repository Content
 
-- **Get Repository Content**  
+- **Get Repository Content**
   Retrieves the content of a repository at a specific path.
 
   - **Template**: `repo://{owner}/{repo}/contents{/path*}`
@@ -246,7 +246,7 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
     - `repo`: Repository name (string, required)
     - `path`: File or directory path (string, optional)
 
-- **Get Repository Content for a Specific Branch**  
+- **Get Repository Content for a Specific Branch**
   Retrieves the content of a repository at a specific path for a given branch.
 
   - **Template**: `repo://{owner}/{repo}/refs/heads/{branch}/contents{/path*}`
@@ -256,7 +256,7 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
     - `branch`: Branch name (string, required)
     - `path`: File or directory path (string, optional)
 
-- **Get Repository Content for a Specific Commit**  
+- **Get Repository Content for a Specific Commit**
   Retrieves the content of a repository at a specific path for a given commit.
 
   - **Template**: `repo://{owner}/{repo}/sha/{sha}/contents{/path*}`
@@ -266,7 +266,7 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
     - `sha`: Commit SHA (string, required)
     - `path`: File or directory path (string, optional)
 
-- **Get Repository Content for a Specific Tag**  
+- **Get Repository Content for a Specific Tag**
   Retrieves the content of a repository at a specific path for a given tag.
 
   - **Template**: `repo://{owner}/{repo}/refs/tags/{tag}/contents{/path*}`
@@ -276,7 +276,7 @@ and set it as the GITHUB_PERSONAL_ACCESS_TOKEN environment variable.
     - `tag`: Tag name (string, required)
     - `path`: File or directory path (string, optional)
 
-- **Get Repository Content for a Specific Pull Request**  
+- **Get Repository Content for a Specific Pull Request**
   Retrieves the content of a repository at a specific path for a given pull request.
 
   - **Template**: `repo://{owner}/{repo}/refs/pull/{pr_number}/head/contents{/path*}`
@@ -318,6 +318,35 @@ GitHub MCP Server running on stdio
 }
 
 ```
+
+## HTTP+SSE server
+
+> [!WARNING]
+> This version of the server works with the [2024-11-05 MCP Spec](https://spec.modelcontextprotocol.io/specification/2024-11-05/), which requires a stateful connection for SSE. We plan to add support for a stateless mode in the future, as allowed by the [2025-03-26 MCP Spec](https://spec.modelcontextprotocol.io/specification/2025-03-26/changelog).
+
+Run the server in HTTP mode with Server-Sent Events (SSE):
+
+```sh
+go run cmd/github-mcp-server/main.go http
+```
+
+The server will start on port 8080 by default. You can specify a different port using the `--port` flag:
+
+```sh
+go run cmd/github-mcp-server/main.go http --port 3000
+```
+
+The server accepts connections at `http://localhost:<port>` and communicates using Server-Sent Events (SSE).
+
+Like the stdio server, ensure your GitHub Personal Access Token is set in the `GITHUB_PERSONAL_ACCESS_TOKEN` environment variable before starting the server.
+
+You can use the same flags as the stdio server:
+
+- `--read-only`: Restrict the server to read-only operations
+- `--log-file`: Path to log file
+- `--enable-command-logging`: Enable logging of all command requests and responses
+- `--export-translations`: Save translations to a JSON file
+- `--gh-host`: Specify the GitHub hostname (for GitHub Enterprise, localhost etc.)
 
 ## i18n / Overriding descriptions
 
@@ -376,7 +405,7 @@ Run **Preferences: Open User Settings (JSON)**, and create or append to the `mcp
         "args": ["stdio"],
         "env": {
           "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:githubpat}"
-        },
+        }
       }
     }
   }

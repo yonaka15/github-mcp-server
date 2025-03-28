@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	stdlog "log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,6 +45,26 @@ var (
 			}
 		},
 	}
+
+	httpCmd = &cobra.Command{
+		Use:   "http",
+		Short: "Start HTTP server",
+		Long:  `Start a server that communicates via HTTP using Server-Sent Events (SSE).`,
+		Run: func(cmd *cobra.Command, args []string) {
+			logFile := viper.GetString("log-file")
+			readOnly := viper.GetBool("read-only")
+			exportTranslations := viper.GetBool("export-translations")
+			port := viper.GetString("port")
+			logger, err := initLogger(logFile)
+			if err != nil {
+				stdlog.Fatal("Failed to initialize logger:", err)
+			}
+			logCommands := viper.GetBool("enable-command-logging")
+			if err := runHTTPServer(readOnly, logger, logCommands, exportTranslations, port); err != nil {
+				stdlog.Fatal("failed to run http server:", err)
+			}
+		},
+	}
 )
 
 func init() {
@@ -56,15 +77,20 @@ func init() {
 	rootCmd.PersistentFlags().Bool("export-translations", false, "Save translations to a JSON file")
 	rootCmd.PersistentFlags().String("gh-host", "", "Specify the GitHub hostname (for GitHub Enterprise etc.)")
 
-	// Bind flag to viper
+	// Add HTTP specific flags
+	httpCmd.Flags().String("port", "8080", "Port for the HTTP server")
+
+	// Bind flags to viper
 	viper.BindPFlag("read-only", rootCmd.PersistentFlags().Lookup("read-only"))
 	viper.BindPFlag("log-file", rootCmd.PersistentFlags().Lookup("log-file"))
 	viper.BindPFlag("enable-command-logging", rootCmd.PersistentFlags().Lookup("enable-command-logging"))
 	viper.BindPFlag("export-translations", rootCmd.PersistentFlags().Lookup("export-translations"))
 	viper.BindPFlag("gh-host", rootCmd.PersistentFlags().Lookup("gh-host"))
+	viper.BindPFlag("port", httpCmd.Flags().Lookup("port"))
 
 	// Add subcommands
 	rootCmd.AddCommand(stdioCmd)
+	rootCmd.AddCommand(httpCmd)
 }
 
 func initConfig() {
@@ -157,6 +183,104 @@ func runStdioServer(readOnly bool, logger *log.Logger, logCommands bool, exportT
 	}
 
 	return nil
+}
+
+func runHTTPServer(readOnly bool, logger *log.Logger, logCommands bool, exportTranslations bool, port string) error {
+	// Create app context
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Create GH client
+	token := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+	if token == "" {
+		logger.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN not set")
+	}
+	ghClient := gogithub.NewClient(nil).WithAuthToken(token)
+
+	// Check GH_HOST env var first, then fall back to viper config
+	host := os.Getenv("GH_HOST")
+	if host == "" {
+		host = viper.GetString("gh-host")
+	}
+
+	if host != "" {
+		var err error
+		ghClient, err = ghClient.WithEnterpriseURLs(host, host)
+		if err != nil {
+			return fmt.Errorf("failed to create GitHub client with host: %w", err)
+		}
+	}
+
+	t, dumpTranslations := translations.TranslationHelper()
+
+	// Create GitHub server
+	ghServer := github.NewServer(ghClient, readOnly, t)
+
+	if exportTranslations {
+		// Once server is initialized, all translations are loaded
+		dumpTranslations()
+	}
+
+	// Create SSE server
+	sseServer := server.NewSSEServer(ghServer)
+
+	// Start listening for messages
+	errC := make(chan error, 1)
+	go func() {
+		// Configure and start HTTP server
+		mux := http.NewServeMux()
+
+		// Add SSE handler with logging middleware if enabled
+		var handler http.Handler = sseServer
+		if logCommands {
+			handler = loggingMiddleware(handler, logger)
+		}
+		mux.Handle("/", handler)
+
+		srv := &http.Server{
+			Addr:    ":" + port,
+			Handler: mux,
+		}
+
+		// Graceful shutdown
+		go func() {
+			<-ctx.Done()
+			if err := srv.Shutdown(context.Background()); err != nil {
+				logger.Errorf("HTTP server shutdown error: %v", err)
+			}
+		}()
+
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			errC <- err
+		}
+	}()
+
+	// Output github-mcp-server string
+	_, _ = fmt.Fprintf(os.Stderr, "GitHub MCP Server running on http://localhost:%s\n", port)
+
+	// Wait for shutdown signal
+	select {
+	case <-ctx.Done():
+		logger.Infof("shutting down server...")
+	case err := <-errC:
+		if err != nil {
+			return fmt.Errorf("error running server: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// loggingMiddleware wraps an http.Handler and logs requests
+func loggingMiddleware(next http.Handler, logger *log.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.WithFields(log.Fields{
+			"method": r.Method,
+			"path":   r.URL.Path,
+		}).Info("Received request")
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
