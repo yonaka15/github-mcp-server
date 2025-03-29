@@ -79,6 +79,11 @@ func NewServer(client *github.Client, readOnly bool, t translations.TranslationH
 	// Add GitHub tools - Code Scanning
 	s.AddTool(getCodeScanningAlert(client, t))
 	s.AddTool(listCodeScanningAlerts(client, t))
+
+	// Add GitHub tools - Secret Scanning
+	s.AddTool(getSecretScanningAlert(client, t))
+	s.AddTool(listSecretScanningAlerts(client, t))
+
 	return s
 }
 
