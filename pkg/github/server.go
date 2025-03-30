@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/github/github-mcp-server/pkg/translations"
@@ -58,6 +59,7 @@ func NewServer(client *github.Client, readOnly bool, t translations.TranslationH
 	}
 
 	// Add GitHub tools - Repositories
+	s.AddTool(getRepositorySettings(client, t))
 	s.AddTool(searchRepositories(client, t))
 	s.AddTool(getFileContents(client, t))
 	s.AddTool(listCommits(client, t))
@@ -67,6 +69,7 @@ func NewServer(client *github.Client, readOnly bool, t translations.TranslationH
 		s.AddTool(forkRepository(client, t))
 		s.AddTool(createBranch(client, t))
 		s.AddTool(pushFiles(client, t))
+		s.AddTool(toggleSecretProtectionFeatures(client, t))
 	}
 
 	// Add GitHub tools - Search
@@ -157,7 +160,9 @@ func requiredParam[T comparable](r mcp.CallToolRequest, p string) (T, error) {
 		return zero, fmt.Errorf("parameter %s is not of type %T", p, zero)
 	}
 
-	if r.Params.Arguments[p].(T) == zero {
+	// Check if the parameter is not empty, i.e: non-zero value
+	// Note: This check is not applicable for bool type, as false is a valid value
+	if r.Params.Arguments[p].(T) == zero && reflect.TypeOf(zero).Kind() != reflect.Bool {
 		return zero, fmt.Errorf("missing required parameter: %s", p)
 
 	}
