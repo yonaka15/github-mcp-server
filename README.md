@@ -255,6 +255,17 @@ The flag `--gh-host` and the environment variable `GH_HOST` can be used to set t
   - `commit_id`: SHA of commit to review (string, optional)
   - `comments`: Line-specific comments array of objects, each object with path (string), position (number), and body (string) (array, optional)
 
+- **create_pull_request** - Create a new pull request
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `title`: PR title (string, required)
+  - `body`: PR description (string, optional)
+  - `head`: Branch containing changes (string, required)
+  - `base`: Branch to merge into (string, required)
+  - `draft`: Create as draft PR (boolean, optional)
+  - `maintainer_can_modify`: Allow maintainer edits (boolean, optional)
+
 ### Repositories
 
 - **create_or_update_file** - Create or update a single file in a repository
