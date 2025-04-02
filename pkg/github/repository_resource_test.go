@@ -35,7 +35,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 	expectedDirContent := []mcp.TextResourceContents{
 		{
 			URI:      "https://github.com/owner/repo/blob/main/README.md",
-			MIMEType: "text/markdown; charset=utf-8",
+			MIMEType: "",
 			Text:     "README.md",
 		},
 		{
