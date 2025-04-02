@@ -160,7 +160,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 			requestArgs: map[string]any{
 				"owner":  []string{"owner"},
 				"repo":   []string{"repo"},
-				"path":   []string{"data.png"},
+				"path":   []string{"README.md"},
 				"branch": []string{"main"},
 			},
 			expectedResult: expectedTextContent,
