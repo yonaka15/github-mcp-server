@@ -153,7 +153,7 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 					if err != nil {
 						return nil, fmt.Errorf("failed to read response body: %w", err)
 					}
-					return nil, fmt.Errorf("failed to get security analysis settings: %s", string(body))
+					return nil, fmt.Errorf("failed to fetch file content: %s", string(body))
 				}
 
 				ext := filepath.Ext(fileContent.GetName())
