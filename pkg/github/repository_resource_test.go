@@ -132,7 +132,8 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						w.Header().Set("Content-Type", "image/png")
 						// as this is given as a png, it will return the content as a blob
-						w.Write([]byte("# Test Repository\n\nThis is a test repository."))
+						_, err := w.Write([]byte("# Test Repository\n\nThis is a test repository."))
+						require.NoError(t, err)
 					}),
 				),
 			),
