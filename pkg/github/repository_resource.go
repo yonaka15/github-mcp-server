@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"mime"
 	"path/filepath"
 	"strings"
@@ -60,30 +61,41 @@ func getRepositoryResourcePrContent(client *github.Client, t translations.Transl
 
 func repositoryResourceContentsHandler(client *github.Client) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	return func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		// the matcher will give []string with one elemenent
+		// https://github.com/mark3labs/mcp-go/pull/54
+		o, ok := request.Params.Arguments["owner"].([]string)
+		if !ok || len(o) == 0 {
+			return nil, errors.New("owner is required")
+		}
+		owner := o[0]
 
-		owner := request.Params.Arguments["owner"].([]string)[0]
-		repo := request.Params.Arguments["repo"].([]string)[0]
+		r, ok := request.Params.Arguments["repo"].([]string)
+		if !ok || len(r) == 0 {
+			return nil, errors.New("repo is required")
+		}
+		repo := r[0]
+
 		// path should be a joined list of the path parts
 		path := strings.Join(request.Params.Arguments["path"].([]string), "/")
 
 		opts := &github.RepositoryContentGetOptions{}
 
 		sha, ok := request.Params.Arguments["sha"].([]string)
-		if ok {
+		if ok && len(sha) > 0 {
 			opts.Ref = sha[0]
 		}
 
 		branch, ok := request.Params.Arguments["branch"].([]string)
-		if ok {
+		if ok && len(branch) > 0 {
 			opts.Ref = "refs/heads/" + branch[0]
 		}
 
 		tag, ok := request.Params.Arguments["tag"].([]string)
-		if ok {
+		if ok && len(tag) > 0 {
 			opts.Ref = "refs/tags/" + tag[0]
 		}
 		prNumber, ok := request.Params.Arguments["pr_number"].([]string)
-		if ok {
+		if ok && len(prNumber) > 0 {
 			opts.Ref = "refs/pull/" + prNumber[0] + "/head"
 		}
 

@@ -71,6 +71,30 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 		expectedErrMsg string
 	}{
 		{
+			name: "missing owner",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatch(
+					mock.GetReposContentsByOwnerByRepoByPath,
+					mockFileContent,
+				),
+			),
+			requestArgs: map[string]any{},
+			expectError: true,
+		},
+		{
+			name: "missing repo",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatch(
+					mock.GetReposContentsByOwnerByRepoByPath,
+					mockFileContent,
+				),
+			),
+			requestArgs: map[string]any{
+				"owner": []string{"owner"},
+			},
+			expectError: true,
+		},
+		{
 			name: "successful file content fetch",
 			mockedClient: mock.NewMockedHTTPClient(
 				mock.WithRequestMatch(
