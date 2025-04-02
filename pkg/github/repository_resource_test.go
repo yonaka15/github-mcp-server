@@ -10,7 +10,6 @@ import (
 	"github.com/google/go-github/v69/github"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,7 +65,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 		name           string
 		mockedClient   *http.Client
 		requestArgs    map[string]any
-		expectError    bool
+		expectError    string
 		expectedResult any
 		expectedErrMsg string
 	}{
@@ -79,7 +78,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 				),
 			),
 			requestArgs: map[string]any{},
-			expectError: true,
+			expectError: "owner is required",
 		},
 		{
 			name: "missing repo",
@@ -92,7 +91,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 			requestArgs: map[string]any{
 				"owner": []string{"owner"},
 			},
-			expectError: true,
+			expectError: "repo is required",
 		},
 		{
 			name: "successful file content fetch",
@@ -108,7 +107,6 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 				"path":   []string{"README.md"},
 				"branch": []string{"main"},
 			},
-			expectError:    false,
 			expectedResult: expectedFileContent,
 		},
 		{
@@ -124,11 +122,25 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 				"repo":  []string{"repo"},
 				"path":  []string{"src"},
 			},
-			expectError:    false,
 			expectedResult: expectedDirContent,
 		},
 		{
-			name: "empty content fetch",
+			name: "no data",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatch(
+					mock.GetReposContentsByOwnerByRepoByPath,
+				),
+			),
+			requestArgs: map[string]any{
+				"owner": []string{"owner"},
+				"repo":  []string{"repo"},
+				"path":  []string{"src"},
+			},
+			expectedResult: nil,
+			expectError:    "no repository resource content found",
+		},
+		{
+			name: "empty data",
 			mockedClient: mock.NewMockedHTTPClient(
 				mock.WithRequestMatch(
 					mock.GetReposContentsByOwnerByRepoByPath,
@@ -140,7 +152,6 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 				"repo":  []string{"repo"},
 				"path":  []string{"src"},
 			},
-			expectError:    false,
 			expectedResult: nil,
 		},
 		{
@@ -160,8 +171,7 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 				"path":   []string{"nonexistent.md"},
 				"branch": []string{"main"},
 			},
-			expectError:    true,
-			expectedErrMsg: "404 Not Found",
+			expectError: "404 Not Found",
 		},
 	}
 
@@ -181,9 +191,8 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 
 			resp, err := handler(context.TODO(), request)
 
-			if tc.expectError {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedErrMsg)
+			if tc.expectError != "" {
+				require.ErrorContains(t, err, tc.expectedErrMsg)
 				return
 			}
 

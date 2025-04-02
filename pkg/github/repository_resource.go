@@ -76,7 +76,11 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 		repo := r[0]
 
 		// path should be a joined list of the path parts
-		path := strings.Join(request.Params.Arguments["path"].([]string), "/")
+		path := ""
+		p, ok := request.Params.Arguments["path"].([]string)
+		if ok {
+			path = strings.Join(p, "/")
+		}
 
 		opts := &github.RepositoryContentGetOptions{}
 
@@ -150,6 +154,6 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 			}
 		}
 
-		return nil, nil
+		return nil, errors.New("no repository resource content found")
 	}
 }
