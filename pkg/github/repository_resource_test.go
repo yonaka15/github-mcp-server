@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/github/github-mcp-server/pkg/translations"
 	"github.com/google/go-github/v69/github"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_RepoContentsResourceHandler(t *testing.T) {
+func Test_repositoryResourceContentsHandler(t *testing.T) {
 	mockDirContent := []*github.RepositoryContent{
 		{
 			Type:    github.Ptr("file"),
@@ -143,7 +144,7 @@ func Test_RepoContentsResourceHandler(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			client := github.NewClient(tc.mockedClient)
-			handler := repoContentsResourceHandler(client)
+			handler := repositoryResourceContentsHandler(client)
 
 			request := mcp.ReadResourceRequest{
 				Params: struct {
@@ -166,4 +167,28 @@ func Test_RepoContentsResourceHandler(t *testing.T) {
 			require.ElementsMatch(t, resp, tc.expectedResult)
 		})
 	}
+}
+
+func Test_getRepositoryResourceContent(t *testing.T) {
+	tmpl, _ := getRepositoryResourceContent(nil, translations.NullTranslationHelper)
+	require.Equal(t, "repo://{owner}/{repo}/contents{/path*}", tmpl.URITemplate.Raw())
+}
+
+func Test_getRepositoryResourceBranchContent(t *testing.T) {
+	tmpl, _ := getRepositoryResourceBranchContent(nil, translations.NullTranslationHelper)
+	require.Equal(t, "repo://{owner}/{repo}/refs/heads/{branch}/contents{/path*}", tmpl.URITemplate.Raw())
+}
+func Test_getRepositoryResourceCommitContent(t *testing.T) {
+	tmpl, _ := getRepositoryResourceCommitContent(nil, translations.NullTranslationHelper)
+	require.Equal(t, "repo://{owner}/{repo}/sha/{sha}/contents{/path*}", tmpl.URITemplate.Raw())
+}
+
+func Test_getRepositoryResourceTagContent(t *testing.T) {
+	tmpl, _ := getRepositoryResourceTagContent(nil, translations.NullTranslationHelper)
+	require.Equal(t, "repo://{owner}/{repo}/refs/tags/{tag}/contents{/path*}", tmpl.URITemplate.Raw())
+}
+
+func Test_getRepositoryResourcePrContent(t *testing.T) {
+	tmpl, _ := getRepositoryResourcePrContent(nil, translations.NullTranslationHelper)
+	require.Equal(t, "repo://{owner}/{repo}/refs/pull/{pr_number}/head/contents{/path*}", tmpl.URITemplate.Raw())
 }

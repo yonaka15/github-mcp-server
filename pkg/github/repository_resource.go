@@ -13,53 +13,53 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// getRepositoryContent defines the resource template and handler for the Repository Content API.
-func getRepositoryContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
+// getRepositoryResourceContent defines the resource template and handler for getting repository content.
+func getRepositoryResourceContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
 	return mcp.NewResourceTemplate(
 			"repo://{owner}/{repo}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_DESCRIPTION", "Repository Content"),
 		),
-		repoContentsResourceHandler(client)
+		repositoryResourceContentsHandler(client)
 }
 
-// getRepositoryContent defines the resource template and handler for the Repository Content API.
-func getRepositoryBranchContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
+// getRepositoryContent defines the resource template and handler for getting repository content for a branch.
+func getRepositoryResourceBranchContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
 	return mcp.NewResourceTemplate(
 			"repo://{owner}/{repo}/refs/heads/{branch}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_BRANCH_DESCRIPTION", "Repository Content for specific branch"),
 		),
-		repoContentsResourceHandler(client)
+		repositoryResourceContentsHandler(client)
 }
 
-// getRepositoryContent defines the resource template and handler for the Repository Content API.
-func getRepositoryCommitContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
+// getRepositoryResourceCommitContent defines the resource template and handler for getting repository content for a commit.
+func getRepositoryResourceCommitContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
 	return mcp.NewResourceTemplate(
 			"repo://{owner}/{repo}/sha/{sha}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_COMMIT_DESCRIPTION", "Repository Content for specific commit"),
 		),
-		repoContentsResourceHandler(client)
+		repositoryResourceContentsHandler(client)
 }
 
-// getRepositoryContent defines the resource template and handler for the Repository Content API.
-func getRepositoryTagContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
+// getRepositoryResourceTagContent defines the resource template and handler for getting repository content for a tag.
+func getRepositoryResourceTagContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
 	return mcp.NewResourceTemplate(
 			"repo://{owner}/{repo}/refs/tags/{tag}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_TAG_DESCRIPTION", "Repository Content for specific tag"),
 		),
-		repoContentsResourceHandler(client)
+		repositoryResourceContentsHandler(client)
 }
 
-// getRepositoryContent defines the resource template and handler for the Repository Content API.
-func getRepositoryPrContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
+// getRepositoryResourcePrContent defines the resource template and handler for getting repository content for a pull request.
+func getRepositoryResourcePrContent(client *github.Client, t translations.TranslationHelperFunc) (mcp.ResourceTemplate, server.ResourceTemplateHandlerFunc) {
 	return mcp.NewResourceTemplate(
 			"repo://{owner}/{repo}/refs/pull/{pr_number}/head/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_PR_DESCRIPTION", "Repository Content for specific pull request"),
 		),
-		repoContentsResourceHandler(client)
+		repositoryResourceContentsHandler(client)
 }
 
-func repoContentsResourceHandler(client *github.Client) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	return func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { // Extract parameters from request.Params.URI
+func repositoryResourceContentsHandler(client *github.Client) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	return func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 
 		owner := request.Params.Arguments["owner"].([]string)[0]
 		repo := request.Params.Arguments["repo"].([]string)[0]
