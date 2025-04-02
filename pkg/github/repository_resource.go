@@ -19,7 +19,7 @@ func getRepositoryContent(client *github.Client, t translations.TranslationHelpe
 			"repo://{owner}/{repo}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_DESCRIPTION", "Repository Content"),
 		),
-		handlerFunc(client)
+		repoContentsResourceHandler(client)
 }
 
 // getRepositoryContent defines the resource template and handler for the Repository Content API.
@@ -28,7 +28,7 @@ func getRepositoryBranchContent(client *github.Client, t translations.Translatio
 			"repo://{owner}/{repo}/refs/heads/{branch}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_BRANCH_DESCRIPTION", "Repository Content for specific branch"),
 		),
-		handlerFunc(client)
+		repoContentsResourceHandler(client)
 }
 
 // getRepositoryContent defines the resource template and handler for the Repository Content API.
@@ -37,7 +37,7 @@ func getRepositoryCommitContent(client *github.Client, t translations.Translatio
 			"repo://{owner}/{repo}/sha/{sha}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_COMMIT_DESCRIPTION", "Repository Content for specific commit"),
 		),
-		handlerFunc(client)
+		repoContentsResourceHandler(client)
 }
 
 // getRepositoryContent defines the resource template and handler for the Repository Content API.
@@ -46,7 +46,7 @@ func getRepositoryTagContent(client *github.Client, t translations.TranslationHe
 			"repo://{owner}/{repo}/refs/tags/{tag}/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_TAG_DESCRIPTION", "Repository Content for specific tag"),
 		),
-		handlerFunc(client)
+		repoContentsResourceHandler(client)
 }
 
 // getRepositoryContent defines the resource template and handler for the Repository Content API.
@@ -55,10 +55,10 @@ func getRepositoryPrContent(client *github.Client, t translations.TranslationHel
 			"repo://{owner}/{repo}/refs/pull/{pr_number}/head/contents{/path*}", // Resource template
 			t("RESOURCE_REPOSITORY_CONTENT_PR_DESCRIPTION", "Repository Content for specific pull request"),
 		),
-		handlerFunc(client)
+		repoContentsResourceHandler(client)
 }
 
-func handlerFunc(client *github.Client) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+func repoContentsResourceHandler(client *github.Client) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	return func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { // Extract parameters from request.Params.URI
 
 		owner := request.Params.Arguments["owner"].([]string)[0]
@@ -110,7 +110,8 @@ func handlerFunc(client *github.Client) func(ctx context.Context, request mcp.Re
 			}
 			return resources, nil
 
-		} else if fileContent != nil {
+		}
+		if fileContent != nil {
 			// Process the file content and return it as a binary resource
 
 			if fileContent.Content != nil {
