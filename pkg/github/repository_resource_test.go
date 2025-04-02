@@ -57,8 +57,7 @@ func Test_RepoContentsResourceHandler(t *testing.T) {
 
 	expectedFileContent := []mcp.BlobResourceContents{
 		{
-			Blob: base64.StdEncoding.EncodeToString([]byte("IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku")), // Base64 encoded "# Test Repository\n\nThis is a test repository."
-
+			Blob: base64.StdEncoding.EncodeToString([]byte("IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku")),
 		},
 	}
 
@@ -143,11 +142,9 @@ func Test_RepoContentsResourceHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
 			handler := repoContentsResourceHandler(client)
 
-			// Create call request
 			request := mcp.ReadResourceRequest{
 				Params: struct {
 					URI       string         `json:"uri"`

@@ -87,14 +87,12 @@ func repoContentsResourceHandler(client *github.Client) func(ctx context.Context
 			opts.Ref = "refs/pull/" + prNumber[0] + "/head"
 		}
 
-		// Use the GitHub client to fetch repository content
 		fileContent, directoryContent, _, err := client.Repositories.GetContents(ctx, owner, repo, path, opts)
 		if err != nil {
 			return nil, err
 		}
 
 		if directoryContent != nil {
-			// Process the directory content and return it as resource contents
 			var resources []mcp.ResourceContents
 			for _, entry := range directoryContent {
 				mimeType := "text/directory"
@@ -112,8 +110,6 @@ func repoContentsResourceHandler(client *github.Client) func(ctx context.Context
 
 		}
 		if fileContent != nil {
-			// Process the file content and return it as a binary resource
-
 			if fileContent.Content != nil {
 				decodedContent, err := fileContent.GetContent()
 				if err != nil {
@@ -122,9 +118,7 @@ func repoContentsResourceHandler(client *github.Client) func(ctx context.Context
 
 				mimeType := mime.TypeByExtension(filepath.Ext(fileContent.GetName()))
 
-				// Check if the file is text-based
 				if strings.HasPrefix(mimeType, "text") {
-					// Return as TextResourceContents
 					return []mcp.ResourceContents{
 						mcp.TextResourceContents{
 							URI:      request.Params.URI,
@@ -134,7 +128,6 @@ func repoContentsResourceHandler(client *github.Client) func(ctx context.Context
 					}, nil
 				}
 
-				// Otherwise, return as BlobResourceContents
 				return []mcp.ResourceContents{
 					mcp.BlobResourceContents{
 						URI:      request.Params.URI,
