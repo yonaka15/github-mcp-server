@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"mime"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -113,7 +116,12 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 			for _, entry := range directoryContent {
 				mimeType := "text/directory"
 				if entry.GetType() == "file" {
-					mimeType = mime.TypeByExtension(filepath.Ext(entry.GetName()))
+					// this is system dependent, and a best guess
+					ext := filepath.Ext(entry.GetName())
+					mimeType = mime.TypeByExtension(ext)
+					if ext == ".md" {
+						mimeType = "text/markdown"
+					}
 				}
 				resources = append(resources, mcp.TextResourceContents{
 					URI:      entry.GetHTMLURL(),
@@ -127,28 +135,62 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 		}
 		if fileContent != nil {
 			if fileContent.Content != nil {
-				decodedContent, err := fileContent.GetContent()
+				// download the file content from fileContent.GetDownloadURL() and use the content-type header to determine the MIME type
+				// and return the content as a blob unless it is a text file, where you can return the content as text
+				req, err := http.NewRequest("GET", fileContent.GetDownloadURL(), nil)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("failed to create request: %w", err)
 				}
 
-				mimeType := mime.TypeByExtension(filepath.Ext(fileContent.GetName()))
+				resp, err := client.Client().Do(req)
+				if err != nil {
+					return nil, fmt.Errorf("failed to send request: %w", err)
+				}
+				defer func() { _ = resp.Body.Close() }()
 
+				if resp.StatusCode != http.StatusOK {
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return nil, fmt.Errorf("failed to read response body: %w", err)
+					}
+					return nil, fmt.Errorf("failed to fetch file content: %s", string(body))
+				}
+
+				ext := filepath.Ext(fileContent.GetName())
+				mimeType := resp.Header.Get("Content-Type")
+				if ext == ".md" {
+					mimeType = "text/markdown"
+				} else if mimeType == "" {
+					// backstop to the file extension if the content type is not set
+					mimeType = mime.TypeByExtension(filepath.Ext(fileContent.GetName()))
+				}
+
+				// if the content is a string, return it as text
 				if strings.HasPrefix(mimeType, "text") {
+					content, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse the response body: %w", err)
+					}
+
 					return []mcp.ResourceContents{
 						mcp.TextResourceContents{
 							URI:      request.Params.URI,
 							MIMEType: mimeType,
-							Text:     decodedContent,
+							Text:     string(content),
 						},
 					}, nil
+				}
+				// otherwise, read the content and encode it as base64
+				decodedContent, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse the response body: %w", err)
 				}
 
 				return []mcp.ResourceContents{
 					mcp.BlobResourceContents{
 						URI:      request.Params.URI,
 						MIMEType: mimeType,
-						Blob:     base64.StdEncoding.EncodeToString([]byte(decodedContent)), // Encode content as Base64
+						Blob:     base64.StdEncoding.EncodeToString(decodedContent), // Encode content as Base64
 					},
 				}, nil
 			}
