@@ -117,7 +117,11 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 				mimeType := "text/directory"
 				if entry.GetType() == "file" {
 					// this is system dependent, and a best guess
-					mimeType = mime.TypeByExtension(filepath.Ext(entry.GetName()))
+					ext := filepath.Ext(entry.GetName())
+					mimeType = mime.TypeByExtension(ext)
+					if ext == ".md" {
+						mimeType = "text/markdown"
+					}
 				}
 				resources = append(resources, mcp.TextResourceContents{
 					URI:      entry.GetHTMLURL(),
@@ -152,10 +156,13 @@ func repositoryResourceContentsHandler(client *github.Client) func(ctx context.C
 					return nil, fmt.Errorf("failed to get security analysis settings: %s", string(body))
 				}
 
+				ext := filepath.Ext(fileContent.GetName())
 				mimeType := resp.Header.Get("Content-Type")
-				if mimeType == "" {
+				if ext == ".md" {
+					mimeType = "text/markdown"
+				} else if mimeType == "" {
 					// backstop to the file extension if the content type is not set
-					mime.TypeByExtension(filepath.Ext(fileContent.GetName()))
+					mimeType = mime.TypeByExtension(filepath.Ext(fileContent.GetName()))
 				}
 
 				// if the content is a string, return it as text

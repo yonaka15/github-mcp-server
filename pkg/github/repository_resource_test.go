@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"testing"
 
@@ -13,28 +12,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var GetRawReposContentsByOwnerByRepoByPath mock.EndpointPattern = mock.EndpointPattern{
+	Pattern: "/{owner}/{repo}/main/{path:.+}",
+	Method:  "GET",
+}
+
 func Test_repositoryResourceContentsHandler(t *testing.T) {
 	mockDirContent := []*github.RepositoryContent{
 		{
-			Type:    github.Ptr("file"),
-			Name:    github.Ptr("README.md"),
-			Path:    github.Ptr("README.md"),
-			SHA:     github.Ptr("abc123"),
-			Size:    github.Ptr(42),
-			HTMLURL: github.Ptr("https://github.com/owner/repo/blob/main/README.md"),
+			Type:        github.Ptr("file"),
+			Name:        github.Ptr("README.md"),
+			Path:        github.Ptr("README.md"),
+			SHA:         github.Ptr("abc123"),
+			Size:        github.Ptr(42),
+			HTMLURL:     github.Ptr("https://github.com/owner/repo/blob/main/README.md"),
+			DownloadURL: github.Ptr("https://raw.githubusercontent.com/owner/repo/main/README.md"),
 		},
 		{
-			Type:    github.Ptr("dir"),
-			Name:    github.Ptr("src"),
-			Path:    github.Ptr("src"),
-			SHA:     github.Ptr("def456"),
-			HTMLURL: github.Ptr("https://github.com/owner/repo/tree/main/src"),
+			Type:        github.Ptr("dir"),
+			Name:        github.Ptr("src"),
+			Path:        github.Ptr("src"),
+			SHA:         github.Ptr("def456"),
+			HTMLURL:     github.Ptr("https://github.com/owner/repo/tree/main/src"),
+			DownloadURL: github.Ptr("https://raw.githubusercontent.com/owner/repo/main/src"),
 		},
 	}
 	expectedDirContent := []mcp.TextResourceContents{
 		{
 			URI:      "https://github.com/owner/repo/blob/main/README.md",
-			MIMEType: "",
+			MIMEType: "text/markdown",
 			Text:     "README.md",
 		},
 		{
@@ -44,20 +50,41 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 		},
 	}
 
-	mockFileContent := &github.RepositoryContent{
+	mockTextContent := &github.RepositoryContent{
 		Type:        github.Ptr("file"),
 		Name:        github.Ptr("README.md"),
 		Path:        github.Ptr("README.md"),
-		Content:     github.Ptr("IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku"), // Base64 encoded "# Test Repository\n\nThis is a test repository."
+		Content:     github.Ptr("# Test Repository\n\nThis is a test repository."),
 		SHA:         github.Ptr("abc123"),
 		Size:        github.Ptr(42),
 		HTMLURL:     github.Ptr("https://github.com/owner/repo/blob/main/README.md"),
 		DownloadURL: github.Ptr("https://raw.githubusercontent.com/owner/repo/main/README.md"),
 	}
 
+	mockFileContent := &github.RepositoryContent{
+		Type:        github.Ptr("file"),
+		Name:        github.Ptr("data.png"),
+		Path:        github.Ptr("data.png"),
+		Content:     github.Ptr("IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku"), // Base64 encoded "# Test Repository\n\nThis is a test repository."
+		SHA:         github.Ptr("abc123"),
+		Size:        github.Ptr(42),
+		HTMLURL:     github.Ptr("https://github.com/owner/repo/blob/main/data.png"),
+		DownloadURL: github.Ptr("https://raw.githubusercontent.com/owner/repo/main/data.png"),
+	}
+
 	expectedFileContent := []mcp.BlobResourceContents{
 		{
-			Blob: base64.StdEncoding.EncodeToString([]byte("IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku")),
+			Blob:     "IyBUZXN0IFJlcG9zaXRvcnkKClRoaXMgaXMgYSB0ZXN0IHJlcG9zaXRvcnku",
+			MIMEType: "image/png",
+			URI:      "",
+		},
+	}
+
+	expectedTextContent := []mcp.TextResourceContents{
+		{
+			Text:     "# Test Repository\n\nThis is a test repository.",
+			MIMEType: "text/markdown",
+			URI:      "",
 		},
 	}
 
@@ -94,20 +121,48 @@ func Test_repositoryResourceContentsHandler(t *testing.T) {
 			expectError: "repo is required",
 		},
 		{
-			name: "successful file content fetch",
+			name: "successful blob content fetch",
 			mockedClient: mock.NewMockedHTTPClient(
 				mock.WithRequestMatch(
 					mock.GetReposContentsByOwnerByRepoByPath,
 					mockFileContent,
 				),
+				mock.WithRequestMatchHandler(
+					GetRawReposContentsByOwnerByRepoByPath,
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "image/png")
+						// as this is given as a png, it will return the content as a blob
+						w.Write([]byte("# Test Repository\n\nThis is a test repository."))
+					}),
+				),
 			),
 			requestArgs: map[string]any{
 				"owner":  []string{"owner"},
 				"repo":   []string{"repo"},
-				"path":   []string{"README.md"},
+				"path":   []string{"data.png"},
 				"branch": []string{"main"},
 			},
 			expectedResult: expectedFileContent,
+		},
+		{
+			name: "successful text content fetch",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatch(
+					mock.GetReposContentsByOwnerByRepoByPath,
+					mockTextContent,
+				),
+				mock.WithRequestMatch(
+					GetRawReposContentsByOwnerByRepoByPath,
+					[]byte("# Test Repository\n\nThis is a test repository."),
+				),
+			),
+			requestArgs: map[string]any{
+				"owner":  []string{"owner"},
+				"repo":   []string{"repo"},
+				"path":   []string{"data.png"},
+				"branch": []string{"main"},
+			},
+			expectedResult: expectedTextContent,
 		},
 		{
 			name: "successful directory content fetch",
