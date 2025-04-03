@@ -43,4 +43,5 @@ changelog:
 
 release:
   draft: true
+  prerelease: auto
   name_template: "GitHub MCP Server {{.Version}}"
