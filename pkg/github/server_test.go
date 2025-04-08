@@ -634,3 +634,119 @@ func TestOptionalPaginationParams(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetLatestVersion(t *testing.T) {
+	// Verify tool definition
+	mockClient := github.NewClient(nil)
+	tool, _ := getLatestVersion(mockClient, "v1.0.0", translations.NullTranslationHelper)
+
+	assert.Equal(t, "get_latest_version", tool.Name)
+	assert.NotEmpty(t, tool.Description)
+
+	// Setup mock release response
+	mockRelease := &github.RepositoryRelease{
+		TagName:     github.Ptr("v1.1.0"),
+		Name:        github.Ptr("Release v1.1.0"),
+		HTMLURL:     github.Ptr("https://github.com/github/github-mcp-server/releases/tag/v1.1.0"),
+		PublishedAt: &github.Timestamp{Time: time.Now().Add(-24 * time.Hour)},
+	}
+
+	tests := []struct {
+		name           string
+		mockedClient   *http.Client
+		currentVersion string
+		expectError    bool
+		expectedResult map[string]interface{}
+		expectedErrMsg string
+	}{
+		{
+			name: "successful get latest version - up to date",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposReleasesLatestByOwnerByRepo,
+					mockResponse(t, http.StatusOK, mockRelease),
+				),
+			),
+			currentVersion: "v1.1.0",
+			expectError:    false,
+			expectedResult: map[string]interface{}{
+				"current_version": "v1.1.0",
+				"latest_version":  "v1.1.0",
+				"up_to_date":      true,
+				"release_url":     "https://github.com/github/github-mcp-server/releases/tag/v1.1.0",
+				// We can't test exact published_at since it's dynamic
+			},
+		},
+		{
+			name: "successful get latest version - outdated",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposReleasesLatestByOwnerByRepo,
+					mockResponse(t, http.StatusOK, mockRelease),
+				),
+			),
+			currentVersion: "v1.0.0",
+			expectError:    false,
+			expectedResult: map[string]interface{}{
+				"current_version": "v1.0.0",
+				"latest_version":  "v1.1.0",
+				"up_to_date":      false,
+				"release_url":     "https://github.com/github/github-mcp-server/releases/tag/v1.1.0",
+				// We can't test exact published_at since it's dynamic
+			},
+		},
+		{
+			name: "API request fails",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposReleasesLatestByOwnerByRepo,
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+						_, _ = w.Write([]byte(`{"message": "Not Found"}`))
+					}),
+				),
+			),
+			currentVersion: "v1.0.0",
+			expectError:    true,
+			expectedErrMsg: "failed to get latest release",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup client with mock
+			client := github.NewClient(tc.mockedClient)
+			_, handler := getLatestVersion(client, tc.currentVersion, translations.NullTranslationHelper)
+
+			// Create call request with empty parameters (none needed for this API)
+			request := createMCPRequest(map[string]interface{}{})
+
+			// Call handler
+			result, err := handler(context.Background(), request)
+
+			// Verify results
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErrMsg)
+				return
+			}
+
+			require.NoError(t, err)
+
+			// Parse result and get text content
+			textContent := getTextResult(t, result)
+
+			// Unmarshal and verify the result
+			var resultMap map[string]interface{}
+			err = json.Unmarshal([]byte(textContent.Text), &resultMap)
+			require.NoError(t, err)
+
+			// Verify expected fields
+			assert.Equal(t, tc.expectedResult["current_version"], resultMap["current_version"])
+			assert.Equal(t, tc.expectedResult["latest_version"], resultMap["latest_version"])
+			assert.Equal(t, tc.expectedResult["up_to_date"], resultMap["up_to_date"])
+			assert.Equal(t, tc.expectedResult["release_url"], resultMap["release_url"])
+			assert.NotEmpty(t, resultMap["published_at"])
+		})
+	}
+}

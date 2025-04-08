@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/github/github-mcp-server/pkg/translations"
 	"github.com/google/go-github/v69/github"
@@ -77,6 +78,10 @@ func NewServer(client *github.Client, version string, readOnly bool, t translati
 	// Add GitHub tools - Code Scanning
 	s.AddTool(getCodeScanningAlert(client, t))
 	s.AddTool(listCodeScanningAlerts(client, t))
+
+	// Add GitHub tools - latest version
+	s.AddTool(getLatestVersion(client, version, t))
+
 	return s
 }
 
@@ -106,6 +111,54 @@ func getMe(client *github.Client, t translations.TranslationHelperFunc) (tool mc
 			r, err := json.Marshal(user)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal user: %w", err)
+			}
+
+			return mcp.NewToolResultText(string(r)), nil
+		}
+}
+
+// getLatestVersion creates a tool to get the latest version of the server.
+// getMe creates a tool to get details of the authenticated user.
+func getLatestVersion(client *github.Client, currentVersion string, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	return mcp.NewTool("get_latest_version",
+			mcp.WithDescription(t("TOOL_GET_ME_DESCRIPTION", "Checks the latest available version of the GitHub MCP server to see if it is up to date.")),
+			mcp.WithString("reason",
+				mcp.Description("Optional: reason the session was created"),
+			),
+		),
+		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			// Get the latest release from GitHub API
+			release, resp, err := client.Repositories.GetLatestRelease(ctx, "github", "github-mcp-server")
+			if err != nil {
+				return nil, fmt.Errorf("failed to get latest release: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusOK {
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, fmt.Errorf("failed to read response body: %w", err)
+				}
+				return mcp.NewToolResultError(fmt.Sprintf("failed to get latest release: %s", string(body))), nil
+			}
+
+			latestVersion := release.GetTagName()
+			if latestVersion == "" {
+				latestVersion = release.GetName()
+			}
+
+			// Compare versions and create response
+			result := map[string]interface{}{
+				"current_version": currentVersion,
+				"latest_version":  latestVersion,
+				"up_to_date":      currentVersion == latestVersion,
+				"release_url":     release.GetHTMLURL(),
+				"published_at":    release.GetPublishedAt().Format(time.RFC3339),
+			}
+
+			r, err := json.Marshal(result)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal result: %w", err)
 			}
 
 			return mcp.NewToolResultText(string(r)), nil

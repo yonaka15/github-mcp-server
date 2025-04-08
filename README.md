@@ -382,6 +382,12 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `state`: Alert state (string, optional)
   - `severity`: Alert severity (string, optional)
 
+### Version
+
+- **get_latest_version** - Get the latest version of the GitHub MCP server to see if you are up to date
+
+  - No parameters required for this tool
+
 ## Resources
 
 ### Repository Content
