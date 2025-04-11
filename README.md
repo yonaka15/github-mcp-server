@@ -18,9 +18,7 @@ automation and interaction capabilities for developers and tools.
 2. Once Docker is installed, you will also need to ensure Docker is running.
 3. Lastly you will need to [Create a GitHub Personal Access Token](https://github.com/settings/personal-access-tokens/new).
 The MCP server can use many of the GitHub APIs, so enable the permissions that you feel comfortable granting your AI tools (to learn more about access tokens, please check out the [documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)).
-    * Your PAT Token needs at least `read:packages` permission to be able to pull from `ghcr.io`.
-4. Login via `docker login ghcr.io -u <YOUR_GITHUB_USERNAME> -p <YOUR_GITHUB_PAT>`.
-
+    * Your PAT token needs at least `read:packages` permission to be able to pull from `ghcr.io`.
 
 ## Installation
 
