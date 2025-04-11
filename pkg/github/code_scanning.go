@@ -91,6 +91,7 @@ func ListCodeScanningAlerts(getClient GetClientFn, t translations.TranslationHel
 			),
 			mcp.WithString("severity",
 				mcp.Description("Only code scanning alerts with this severity will be returned. Possible values are: critical, high, medium, low, warning, note, error."),
+				mcp.Enum("critical", "high", "medium", "low", "warning", "note", "error"),
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
