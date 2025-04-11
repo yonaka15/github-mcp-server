@@ -77,6 +77,14 @@ func NewServer(client *github.Client, readOnly bool, t translations.TranslationH
 	// Add GitHub tools - Code Scanning
 	s.AddTool(getCodeScanningAlert(client, t))
 	s.AddTool(listCodeScanningAlerts(client, t))
+
+	// Add GitHub tools - Notifications
+	s.AddTool(getNotifications(client, t))
+	s.AddTool(getNotificationThread(client, t))
+	if !readOnly {
+		s.AddTool(markNotificationRead(client, t))
+		s.AddTool(markAllNotificationsRead(client, t))
+	}
 	return s
 }
 
@@ -187,6 +195,20 @@ func optionalIntParam(r mcp.CallToolRequest, p string) (int, error) {
 		return 0, err
 	}
 	return int(v), nil
+}
+
+// optionalParamWithDefault is a generic helper function that can be used to fetch a requested parameter from the request
+// with a default value if the parameter is not provided or is zero value.
+func optionalParamWithDefault[T comparable](r mcp.CallToolRequest, p string, d T) (T, error) {
+	var zero T
+	v, err := optionalParam[T](r, p)
+	if err != nil {
+		return zero, err
+	}
+	if v == zero {
+		return d, nil
+	}
+	return v, nil
 }
 
 // optionalIntParamWithDefault is a helper function that can be used to fetch a requested parameter from the request
