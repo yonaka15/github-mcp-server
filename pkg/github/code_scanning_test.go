@@ -15,15 +15,14 @@ import (
 
 func Test_GetCodeScanningAlert(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetCodeScanningAlert(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetCodeScanningAlert(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_code_scanning_alert", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "alertNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "alertNumber"})
+	assert.Equal(t, "get_code_scanning_alert", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "alertNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "alertNumber"})
 
 	// Setup mock alert for success case
 	mockAlert := &github.Alert{
@@ -82,13 +81,13 @@ func Test_GetCodeScanningAlert(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetCodeScanningAlert(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetCodeScanningAlert(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -117,17 +116,16 @@ func Test_GetCodeScanningAlert(t *testing.T) {
 
 func Test_ListCodeScanningAlerts(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := ListCodeScanningAlerts(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := ListCodeScanningAlerts(translations.NullTranslationHelper)
 
-	assert.Equal(t, "list_code_scanning_alerts", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "ref")
-	assert.Contains(t, tool.InputSchema.Properties, "state")
-	assert.Contains(t, tool.InputSchema.Properties, "severity")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+	assert.Equal(t, "list_code_scanning_alerts", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "ref")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "state")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "severity")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo"})
 
 	// Setup mock alerts for success case
 	mockAlerts := []*github.Alert{
@@ -201,13 +199,13 @@ func Test_ListCodeScanningAlerts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ListCodeScanningAlerts(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := ListCodeScanningAlerts(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

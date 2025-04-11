@@ -17,15 +17,14 @@ import (
 
 func Test_GetIssue(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetIssue(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetIssue(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_issue", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "issue_number")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "issue_number"})
+	assert.Equal(t, "get_issue", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "issue_number")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "issue_number"})
 
 	// Setup mock issue for success case
 	mockIssue := &github.Issue{
@@ -82,13 +81,13 @@ func Test_GetIssue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetIssue(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetIssue(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -113,16 +112,15 @@ func Test_GetIssue(t *testing.T) {
 
 func Test_AddIssueComment(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := AddIssueComment(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := AddIssueComment(translations.NullTranslationHelper)
 
-	assert.Equal(t, "add_issue_comment", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "issue_number")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "issue_number", "body"})
+	assert.Equal(t, "add_issue_comment", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "issue_number")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "issue_number", "body"})
 
 	// Setup mock comment for success case
 	mockComment := &github.IssueComment{
@@ -185,7 +183,7 @@ func Test_AddIssueComment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := AddIssueComment(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := AddIssueComment(translations.NullTranslationHelper)
 
 			// Create call request
 			request := mcp.CallToolRequest{
@@ -201,7 +199,7 @@ func Test_AddIssueComment(t *testing.T) {
 			}
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -236,17 +234,16 @@ func Test_AddIssueComment(t *testing.T) {
 
 func Test_SearchIssues(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := SearchIssues(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := SearchIssues(translations.NullTranslationHelper)
 
-	assert.Equal(t, "search_issues", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "q")
-	assert.Contains(t, tool.InputSchema.Properties, "sort")
-	assert.Contains(t, tool.InputSchema.Properties, "order")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"q"})
+	assert.Equal(t, "search_issues", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "q")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sort")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "order")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"q"})
 
 	// Setup mock search results
 	mockSearchResult := &github.IssuesSearchResult{
@@ -352,13 +349,13 @@ func Test_SearchIssues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := SearchIssues(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := SearchIssues(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -392,19 +389,18 @@ func Test_SearchIssues(t *testing.T) {
 
 func Test_CreateIssue(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreateIssue(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreateIssue(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_issue", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "title")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.Contains(t, tool.InputSchema.Properties, "assignees")
-	assert.Contains(t, tool.InputSchema.Properties, "labels")
-	assert.Contains(t, tool.InputSchema.Properties, "milestone")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "title"})
+	assert.Equal(t, "create_issue", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "title")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "assignees")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "labels")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "milestone")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "title"})
 
 	// Setup mock issue for success case
 	mockIssue := &github.Issue{
@@ -506,13 +502,13 @@ func Test_CreateIssue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreateIssue(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreateIssue(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -566,21 +562,21 @@ func Test_CreateIssue(t *testing.T) {
 
 func Test_ListIssues(t *testing.T) {
 	// Verify tool definition
-	mockClient := github.NewClient(nil)
-	tool, _ := ListIssues(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
-	assert.Equal(t, "list_issues", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "state")
-	assert.Contains(t, tool.InputSchema.Properties, "labels")
-	assert.Contains(t, tool.InputSchema.Properties, "sort")
-	assert.Contains(t, tool.InputSchema.Properties, "direction")
-	assert.Contains(t, tool.InputSchema.Properties, "since")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+	tool := ListIssues(translations.NullTranslationHelper)
+
+	assert.Equal(t, "list_issues", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "state")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "labels")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sort")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "direction")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "since")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo"})
 
 	// Setup mock issues for success case
 	mockIssues := []*github.Issue{
@@ -698,13 +694,13 @@ func Test_ListIssues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ListIssues(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := ListIssues(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -742,21 +738,21 @@ func Test_ListIssues(t *testing.T) {
 
 func Test_UpdateIssue(t *testing.T) {
 	// Verify tool definition
-	mockClient := github.NewClient(nil)
-	tool, _ := UpdateIssue(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
-	assert.Equal(t, "update_issue", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "issue_number")
-	assert.Contains(t, tool.InputSchema.Properties, "title")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.Contains(t, tool.InputSchema.Properties, "state")
-	assert.Contains(t, tool.InputSchema.Properties, "labels")
-	assert.Contains(t, tool.InputSchema.Properties, "assignees")
-	assert.Contains(t, tool.InputSchema.Properties, "milestone")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "issue_number"})
+	tool := UpdateIssue(translations.NullTranslationHelper)
+
+	assert.Equal(t, "update_issue", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "issue_number")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "title")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "state")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "labels")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "assignees")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "milestone")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "issue_number"})
 
 	// Setup mock issue for success case
 	mockIssue := &github.Issue{
@@ -882,13 +878,13 @@ func Test_UpdateIssue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := UpdateIssue(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := UpdateIssue(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -999,17 +995,16 @@ func Test_ParseISOTimestamp(t *testing.T) {
 
 func Test_GetIssueComments(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetIssueComments(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetIssueComments(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_issue_comments", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "issue_number")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.Contains(t, tool.InputSchema.Properties, "per_page")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "issue_number"})
+	assert.Equal(t, "get_issue_comments", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "issue_number")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "per_page")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "issue_number"})
 
 	// Setup mock comments for success case
 	mockComments := []*github.IssueComment{
@@ -1100,13 +1095,13 @@ func Test_GetIssueComments(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetIssueComments(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetIssueComments(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

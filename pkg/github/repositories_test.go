@@ -17,16 +17,15 @@ import (
 
 func Test_GetFileContents(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetFileContents(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetFileContents(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_file_contents", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "path")
-	assert.Contains(t, tool.InputSchema.Properties, "branch")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "path"})
+	assert.Equal(t, "get_file_contents", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "path")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "branch")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "path"})
 
 	// Setup mock file content for success case
 	mockFileContent := &github.RepositoryContent{
@@ -132,7 +131,7 @@ func Test_GetFileContents(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetFileContents(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetFileContents(translations.NullTranslationHelper)
 
 			// Create call request
 			request := mcp.CallToolRequest{
@@ -148,7 +147,7 @@ func Test_GetFileContents(t *testing.T) {
 			}
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -188,15 +187,14 @@ func Test_GetFileContents(t *testing.T) {
 
 func Test_ForkRepository(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := ForkRepository(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := ForkRepository(translations.NullTranslationHelper)
 
-	assert.Equal(t, "fork_repository", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "organization")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+	assert.Equal(t, "fork_repository", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "organization")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo"})
 
 	// Setup mock forked repo for success case
 	mockForkedRepo := &github.Repository{
@@ -259,13 +257,13 @@ func Test_ForkRepository(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ForkRepository(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := ForkRepository(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -286,16 +284,15 @@ func Test_ForkRepository(t *testing.T) {
 
 func Test_CreateBranch(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreateBranch(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreateBranch(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_branch", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "branch")
-	assert.Contains(t, tool.InputSchema.Properties, "from_branch")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "branch"})
+	assert.Equal(t, "create_branch", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "branch")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "from_branch")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "branch"})
 
 	// Setup mock repository for default branch test
 	mockRepo := &github.Repository{
@@ -445,13 +442,13 @@ func Test_CreateBranch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreateBranch(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreateBranch(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -477,15 +474,14 @@ func Test_CreateBranch(t *testing.T) {
 
 func Test_GetCommit(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetCommit(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetCommit(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_commit", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "sha")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "sha"})
+	assert.Equal(t, "get_commit", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sha")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "sha"})
 
 	mockCommit := &github.RepositoryCommit{
 		SHA: github.Ptr("abc123def456"),
@@ -572,13 +568,13 @@ func Test_GetCommit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetCommit(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetCommit(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -607,17 +603,16 @@ func Test_GetCommit(t *testing.T) {
 
 func Test_ListCommits(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := ListCommits(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := ListCommits(translations.NullTranslationHelper)
 
-	assert.Equal(t, "list_commits", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "sha")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+	assert.Equal(t, "list_commits", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sha")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo"})
 
 	// Setup mock commits for success case
 	mockCommits := []*github.RepositoryCommit{
@@ -744,13 +739,13 @@ func Test_ListCommits(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ListCommits(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := ListCommits(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -781,19 +776,18 @@ func Test_ListCommits(t *testing.T) {
 
 func Test_CreateOrUpdateFile(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreateOrUpdateFile(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreateOrUpdateFile(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_or_update_file", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "path")
-	assert.Contains(t, tool.InputSchema.Properties, "content")
-	assert.Contains(t, tool.InputSchema.Properties, "message")
-	assert.Contains(t, tool.InputSchema.Properties, "branch")
-	assert.Contains(t, tool.InputSchema.Properties, "sha")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "path", "content", "message", "branch"})
+	assert.Equal(t, "create_or_update_file", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "path")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "content")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "message")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "branch")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sha")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "path", "content", "message", "branch"})
 
 	// Setup mock file content response
 	mockFileResponse := &github.RepositoryContentResponse{
@@ -905,13 +899,13 @@ func Test_CreateOrUpdateFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreateOrUpdateFile(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreateOrUpdateFile(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -944,16 +938,15 @@ func Test_CreateOrUpdateFile(t *testing.T) {
 
 func Test_CreateRepository(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreateRepository(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreateRepository(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_repository", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "name")
-	assert.Contains(t, tool.InputSchema.Properties, "description")
-	assert.Contains(t, tool.InputSchema.Properties, "private")
-	assert.Contains(t, tool.InputSchema.Properties, "autoInit")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"name"})
+	assert.Equal(t, "create_repository", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "name")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "description")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "private")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "autoInit")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"name"})
 
 	// Setup mock repository response
 	mockRepo := &github.Repository{
@@ -1053,13 +1046,13 @@ func Test_CreateRepository(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreateRepository(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreateRepository(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -1090,17 +1083,16 @@ func Test_CreateRepository(t *testing.T) {
 
 func Test_PushFiles(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := PushFiles(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := PushFiles(translations.NullTranslationHelper)
 
-	assert.Equal(t, "push_files", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "branch")
-	assert.Contains(t, tool.InputSchema.Properties, "files")
-	assert.Contains(t, tool.InputSchema.Properties, "message")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "branch", "files", "message"})
+	assert.Equal(t, "push_files", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "branch")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "files")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "message")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "branch", "files", "message"})
 
 	// Setup mock objects
 	mockRef := &github.Reference{
@@ -1386,13 +1378,13 @@ func Test_PushFiles(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := PushFiles(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := PushFiles(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

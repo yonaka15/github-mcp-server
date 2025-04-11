@@ -15,15 +15,14 @@ import (
 
 func Test_SearchRepositories(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := SearchRepositories(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := SearchRepositories(translations.NullTranslationHelper)
 
-	assert.Equal(t, "search_repositories", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "query")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"query"})
+	assert.Equal(t, "search_repositories", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "query")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"query"})
 
 	// Setup mock search results
 	mockSearchResult := &github.RepositoriesSearchResult{
@@ -122,13 +121,13 @@ func Test_SearchRepositories(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := SearchRepositories(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := SearchRepositories(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -162,17 +161,16 @@ func Test_SearchRepositories(t *testing.T) {
 
 func Test_SearchCode(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := SearchCode(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := SearchCode(translations.NullTranslationHelper)
 
-	assert.Equal(t, "search_code", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "q")
-	assert.Contains(t, tool.InputSchema.Properties, "sort")
-	assert.Contains(t, tool.InputSchema.Properties, "order")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"q"})
+	assert.Equal(t, "search_code", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "q")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sort")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "order")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"q"})
 
 	// Setup mock search results
 	mockSearchResult := &github.CodeSearchResult{
@@ -273,13 +271,13 @@ func Test_SearchCode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := SearchCode(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := SearchCode(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -313,17 +311,16 @@ func Test_SearchCode(t *testing.T) {
 
 func Test_SearchUsers(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := SearchUsers(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := SearchUsers(translations.NullTranslationHelper)
 
-	assert.Equal(t, "search_users", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "q")
-	assert.Contains(t, tool.InputSchema.Properties, "sort")
-	assert.Contains(t, tool.InputSchema.Properties, "order")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"q"})
+	assert.Equal(t, "search_users", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "q")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sort")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "order")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"q"})
 
 	// Setup mock search results
 	mockSearchResult := &github.UsersSearchResult{
@@ -428,13 +425,13 @@ func Test_SearchUsers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := SearchUsers(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := SearchUsers(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

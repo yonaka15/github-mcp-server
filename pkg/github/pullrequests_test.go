@@ -16,15 +16,14 @@ import (
 
 func Test_GetPullRequest(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetPullRequest(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetPullRequest(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_pull_request", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "get_pull_request", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR for success case
 	mockPR := &github.PullRequest{
@@ -94,13 +93,13 @@ func Test_GetPullRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetPullRequest(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetPullRequest(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -128,20 +127,19 @@ func Test_GetPullRequest(t *testing.T) {
 
 func Test_UpdatePullRequest(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := UpdatePullRequest(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := UpdatePullRequest(translations.NullTranslationHelper)
 
-	assert.Equal(t, "update_pull_request", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.Contains(t, tool.InputSchema.Properties, "title")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.Contains(t, tool.InputSchema.Properties, "state")
-	assert.Contains(t, tool.InputSchema.Properties, "base")
-	assert.Contains(t, tool.InputSchema.Properties, "maintainer_can_modify")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "update_pull_request", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "title")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "state")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "base")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "maintainer_can_modify")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR for success case
 	mockUpdatedPR := &github.PullRequest{
@@ -257,13 +255,13 @@ func Test_UpdatePullRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := UpdatePullRequest(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := UpdatePullRequest(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -310,21 +308,20 @@ func Test_UpdatePullRequest(t *testing.T) {
 
 func Test_ListPullRequests(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := ListPullRequests(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := ListPullRequests(translations.NullTranslationHelper)
 
-	assert.Equal(t, "list_pull_requests", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "state")
-	assert.Contains(t, tool.InputSchema.Properties, "head")
-	assert.Contains(t, tool.InputSchema.Properties, "base")
-	assert.Contains(t, tool.InputSchema.Properties, "sort")
-	assert.Contains(t, tool.InputSchema.Properties, "direction")
-	assert.Contains(t, tool.InputSchema.Properties, "perPage")
-	assert.Contains(t, tool.InputSchema.Properties, "page")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+	assert.Equal(t, "list_pull_requests", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "state")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "head")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "base")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "sort")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "direction")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "perPage")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "page")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo"})
 
 	// Setup mock PRs for success case
 	mockPRs := []*github.PullRequest{
@@ -403,13 +400,13 @@ func Test_ListPullRequests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ListPullRequests(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := ListPullRequests(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -440,18 +437,17 @@ func Test_ListPullRequests(t *testing.T) {
 
 func Test_MergePullRequest(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := MergePullRequest(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := MergePullRequest(translations.NullTranslationHelper)
 
-	assert.Equal(t, "merge_pull_request", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.Contains(t, tool.InputSchema.Properties, "commit_title")
-	assert.Contains(t, tool.InputSchema.Properties, "commit_message")
-	assert.Contains(t, tool.InputSchema.Properties, "merge_method")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "merge_pull_request", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "commit_title")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "commit_message")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "merge_method")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock merge result for success case
 	mockMergeResult := &github.PullRequestMergeResult{
@@ -518,13 +514,13 @@ func Test_MergePullRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := MergePullRequest(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := MergePullRequest(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -551,15 +547,14 @@ func Test_MergePullRequest(t *testing.T) {
 
 func Test_GetPullRequestFiles(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetPullRequestFiles(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetPullRequestFiles(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_pull_request_files", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "get_pull_request_files", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR files for success case
 	mockFiles := []*github.CommitFile{
@@ -630,13 +625,13 @@ func Test_GetPullRequestFiles(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetPullRequestFiles(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetPullRequestFiles(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -667,15 +662,14 @@ func Test_GetPullRequestFiles(t *testing.T) {
 
 func Test_GetPullRequestStatus(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetPullRequestStatus(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetPullRequestStatus(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_pull_request_status", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "get_pull_request_status", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR for successful PR fetch
 	mockPR := &github.PullRequest{
@@ -790,13 +784,13 @@ func Test_GetPullRequestStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetPullRequestStatus(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetPullRequestStatus(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -828,16 +822,15 @@ func Test_GetPullRequestStatus(t *testing.T) {
 
 func Test_UpdatePullRequestBranch(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := UpdatePullRequestBranch(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := UpdatePullRequestBranch(translations.NullTranslationHelper)
 
-	assert.Equal(t, "update_pull_request_branch", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.Contains(t, tool.InputSchema.Properties, "expectedHeadSha")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "update_pull_request_branch", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "expectedHeadSha")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock update result for success case
 	mockUpdateResult := &github.PullRequestBranchUpdateResponse{
@@ -917,13 +910,13 @@ func Test_UpdatePullRequestBranch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := UpdatePullRequestBranch(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := UpdatePullRequestBranch(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -944,15 +937,14 @@ func Test_UpdatePullRequestBranch(t *testing.T) {
 
 func Test_GetPullRequestComments(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetPullRequestComments(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetPullRequestComments(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_pull_request_comments", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "get_pull_request_comments", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR comments for success case
 	mockComments := []*github.PullRequestComment{
@@ -1033,13 +1025,13 @@ func Test_GetPullRequestComments(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetPullRequestComments(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetPullRequestComments(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -1071,15 +1063,14 @@ func Test_GetPullRequestComments(t *testing.T) {
 
 func Test_GetPullRequestReviews(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := GetPullRequestReviews(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := GetPullRequestReviews(translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_pull_request_reviews", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
+	assert.Equal(t, "get_pull_request_reviews", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber"})
 
 	// Setup mock PR reviews for success case
 	mockReviews := []*github.PullRequestReview{
@@ -1156,13 +1147,13 @@ func Test_GetPullRequestReviews(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetPullRequestReviews(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetPullRequestReviews(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -1194,19 +1185,18 @@ func Test_GetPullRequestReviews(t *testing.T) {
 
 func Test_CreatePullRequestReview(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreatePullRequestReview(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreatePullRequestReview(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_pull_request_review", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "pullNumber")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.Contains(t, tool.InputSchema.Properties, "event")
-	assert.Contains(t, tool.InputSchema.Properties, "commitId")
-	assert.Contains(t, tool.InputSchema.Properties, "comments")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "pullNumber", "event"})
+	assert.Equal(t, "create_pull_request_review", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "pullNumber")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "event")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "commitId")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "comments")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "pullNumber", "event"})
 
 	// Setup mock review for success case
 	mockReview := &github.PullRequestReview{
@@ -1523,13 +1513,13 @@ func Test_CreatePullRequestReview(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreatePullRequestReview(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreatePullRequestReview(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {
@@ -1565,20 +1555,19 @@ func Test_CreatePullRequestReview(t *testing.T) {
 
 func Test_CreatePullRequest(t *testing.T) {
 	// Verify tool definition once
-	mockClient := github.NewClient(nil)
-	tool, _ := CreatePullRequest(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool := CreatePullRequest(translations.NullTranslationHelper)
 
-	assert.Equal(t, "create_pull_request", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "owner")
-	assert.Contains(t, tool.InputSchema.Properties, "repo")
-	assert.Contains(t, tool.InputSchema.Properties, "title")
-	assert.Contains(t, tool.InputSchema.Properties, "body")
-	assert.Contains(t, tool.InputSchema.Properties, "head")
-	assert.Contains(t, tool.InputSchema.Properties, "base")
-	assert.Contains(t, tool.InputSchema.Properties, "draft")
-	assert.Contains(t, tool.InputSchema.Properties, "maintainer_can_modify")
-	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "title", "head", "base"})
+	assert.Equal(t, "create_pull_request", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "title")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "body")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "head")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "base")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "draft")
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "maintainer_can_modify")
+	assert.ElementsMatch(t, tool.Definition.InputSchema.Required, []string{"owner", "repo", "title", "head", "base"})
 
 	// Setup mock PR for success case
 	mockPR := &github.PullRequest{
@@ -1678,13 +1667,13 @@ func Test_CreatePullRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := CreatePullRequest(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := CreatePullRequest(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

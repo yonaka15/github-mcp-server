@@ -23,13 +23,13 @@ func stubGetClientFn(client *github.Client) GetClientFn {
 
 func Test_GetMe(t *testing.T) {
 	// Verify tool definition
-	mockClient := github.NewClient(nil)
-	tool, _ := GetMe(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
-	assert.Equal(t, "get_me", tool.Name)
-	assert.NotEmpty(t, tool.Description)
-	assert.Contains(t, tool.InputSchema.Properties, "reason")
-	assert.Empty(t, tool.InputSchema.Required) // No required parameters
+	tool := GetMe(translations.NullTranslationHelper)
+
+	assert.Equal(t, "get_me", tool.Definition.Name)
+	assert.NotEmpty(t, tool.Definition.Description)
+	assert.Contains(t, tool.Definition.InputSchema.Properties, "reason")
+	assert.Empty(t, tool.Definition.InputSchema.Required) // No required parameters
 
 	// Setup mock user response
 	mockUser := &github.User{
@@ -102,13 +102,13 @@ func Test_GetMe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetMe(stubGetClientFn(client), translations.NullTranslationHelper)
+			tool := GetMe(translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
 
 			// Call handler
-			result, err := handler(context.Background(), request)
+			result, err := tool.Handler(stubGetClientFn(client))(context.Background(), request)
 
 			// Verify results
 			if tc.expectError {

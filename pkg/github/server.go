@@ -16,6 +16,101 @@ import (
 
 type GetClientFn func(context.Context) (*github.Client, error)
 
+type Access int
+
+const (
+	// Zero value is writer, that way if forgotten, it won't be included
+	// in read only configuration.
+	Write Access = iota
+	ReadOnly
+)
+
+type Handler func(getClient GetClientFn) server.ToolHandlerFunc
+
+type Tool struct {
+	Definition mcp.Tool
+	Handler    Handler
+	Access     Access
+	Category   Category
+}
+
+type Category string
+
+const (
+	// CategoryUsers is the category for user-related tools.
+	CategoryUsers Category = "Users"
+	// CategoryIssues is the category for issue-related tools.
+	CategoryIssues Category = "Issues"
+	// CategoryPullRequests is the category for pull request-related tools.
+	CategoryPullRequests Category = "Pull Requests"
+	// CategoryRepositories is the category for repository-related tools.
+	CategoryRepositories Category = "Repositories"
+	// CategorySearch is the category for search-related tools.
+	CategorySearch Category = "Search"
+	// CategoryCodeScanning is the category for code scanning-related tools.
+	CategoryCodeScanning Category = "Code Scanning"
+)
+
+type Tools []Tool
+
+func (t Tools) ReadOnly() []Tool {
+	var readOnlyTools []Tool
+	for _, tool := range t {
+		if tool.Access == ReadOnly {
+			readOnlyTools = append(readOnlyTools, tool)
+		}
+	}
+	return readOnlyTools
+}
+
+func DefaultTools(t translations.TranslationHelperFunc) Tools {
+	return []Tool{
+		// Users
+		GetMe(t),
+
+		// Issues
+		GetIssue(t),
+		SearchIssues(t),
+		ListIssues(t),
+		GetIssueComments(t),
+		CreateIssue(t),
+		AddIssueComment(t),
+		UpdateIssue(t),
+
+		// Pull Requests
+		GetPullRequest(t),
+		ListPullRequests(t),
+		GetPullRequestFiles(t),
+		GetPullRequestStatus(t),
+		GetPullRequestComments(t),
+		GetPullRequestReviews(t),
+		MergePullRequest(t),
+		UpdatePullRequestBranch(t),
+		CreatePullRequestReview(t),
+		CreatePullRequest(t),
+		UpdatePullRequest(t),
+
+		// Repositories
+		SearchRepositories(t),
+		GetFileContents(t),
+		GetCommit(t),
+		ListCommits(t),
+		CreateOrUpdateFile(t),
+		CreateRepository(t),
+		ForkRepository(t),
+		CreateBranch(t),
+		PushFiles(t),
+
+		// Search
+		SearchCode(t),
+		SearchUsers(t),
+
+		// Code Scanning
+		GetCodeScanningAlert(t),
+		ListCodeScanningAlerts(t),
+	}
+}
+
 // NewServer creates a new GitHub MCP server with the specified GH client and logger.
 func NewServer(getClient GetClientFn, version string, readOnly bool, t translations.TranslationHelperFunc, opts ...server.ServerOption) *server.MCPServer {
 	// Add default options
@@ -32,99 +127,66 @@ func NewServer(getClient GetClientFn, version string, readOnly bool, t translati
 		opts...,
 	)
 
-	// Add GitHub Resources
+	// // Add GitHub Resources
 	s.AddResourceTemplate(GetRepositoryResourceContent(getClient, t))
 	s.AddResourceTemplate(GetRepositoryResourceBranchContent(getClient, t))
 	s.AddResourceTemplate(GetRepositoryResourceCommitContent(getClient, t))
 	s.AddResourceTemplate(GetRepositoryResourceTagContent(getClient, t))
 	s.AddResourceTemplate(GetRepositoryResourcePrContent(getClient, t))
 
-	// Add GitHub tools - Issues
-	s.AddTool(GetIssue(getClient, t))
-	s.AddTool(SearchIssues(getClient, t))
-	s.AddTool(ListIssues(getClient, t))
-	s.AddTool(GetIssueComments(getClient, t))
-	if !readOnly {
-		s.AddTool(CreateIssue(getClient, t))
-		s.AddTool(AddIssueComment(getClient, t))
-		s.AddTool(UpdateIssue(getClient, t))
+	// Add GitHub Tools
+	tools := DefaultTools(t)
+	if readOnly {
+		tools = tools.ReadOnly()
 	}
 
-	// Add GitHub tools - Pull Requests
-	s.AddTool(GetPullRequest(getClient, t))
-	s.AddTool(ListPullRequests(getClient, t))
-	s.AddTool(GetPullRequestFiles(getClient, t))
-	s.AddTool(GetPullRequestStatus(getClient, t))
-	s.AddTool(GetPullRequestComments(getClient, t))
-	s.AddTool(GetPullRequestReviews(getClient, t))
-	if !readOnly {
-		s.AddTool(MergePullRequest(getClient, t))
-		s.AddTool(UpdatePullRequestBranch(getClient, t))
-		s.AddTool(CreatePullRequestReview(getClient, t))
-		s.AddTool(CreatePullRequest(getClient, t))
-		s.AddTool(UpdatePullRequest(getClient, t))
+	for _, tool := range tools {
+		s.AddTool(tool.Definition, tool.Handler(getClient))
 	}
 
-	// Add GitHub tools - Repositories
-	s.AddTool(SearchRepositories(getClient, t))
-	s.AddTool(GetFileContents(getClient, t))
-	s.AddTool(GetCommit(getClient, t))
-	s.AddTool(ListCommits(getClient, t))
-	if !readOnly {
-		s.AddTool(CreateOrUpdateFile(getClient, t))
-		s.AddTool(CreateRepository(getClient, t))
-		s.AddTool(ForkRepository(getClient, t))
-		s.AddTool(CreateBranch(getClient, t))
-		s.AddTool(PushFiles(getClient, t))
-	}
-
-	// Add GitHub tools - Search
-	s.AddTool(SearchCode(getClient, t))
-	s.AddTool(SearchUsers(getClient, t))
-
-	// Add GitHub tools - Users
-	s.AddTool(GetMe(getClient, t))
-
-	// Add GitHub tools - Code Scanning
-	s.AddTool(GetCodeScanningAlert(getClient, t))
-	s.AddTool(ListCodeScanningAlerts(getClient, t))
 	return s
 }
 
 // GetMe creates a tool to get details of the authenticated user.
-func GetMe(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
-	return mcp.NewTool("get_me",
+func GetMe(t translations.TranslationHelperFunc) Tool {
+	return Tool{
+		Definition: mcp.NewTool("get_me",
 			mcp.WithDescription(t("TOOL_GET_ME_DESCRIPTION", "Get details of the authenticated GitHub user. Use this when a request include \"me\", \"my\"...")),
 			mcp.WithString("reason",
 				mcp.Description("Optional: reason the session was created"),
 			),
 		),
-		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			client, err := getClient(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
-			}
-			user, resp, err := client.Users.Get(ctx, "")
-			if err != nil {
-				return nil, fmt.Errorf("failed to get user: %w", err)
-			}
-			defer func() { _ = resp.Body.Close() }()
-
-			if resp.StatusCode != http.StatusOK {
-				body, err := io.ReadAll(resp.Body)
+		Handler: func(getClient GetClientFn) server.ToolHandlerFunc {
+			return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+				client, err := getClient(ctx)
 				if err != nil {
-					return nil, fmt.Errorf("failed to read response body: %w", err)
+					return nil, fmt.Errorf("failed to get GitHub client: %w", err)
 				}
-				return mcp.NewToolResultError(fmt.Sprintf("failed to get user: %s", string(body))), nil
-			}
+				user, resp, err := client.Users.Get(ctx, "")
+				if err != nil {
+					return nil, fmt.Errorf("failed to get user: %w", err)
+				}
+				defer func() { _ = resp.Body.Close() }()
 
-			r, err := json.Marshal(user)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal user: %w", err)
-			}
+				if resp.StatusCode != http.StatusOK {
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return nil, fmt.Errorf("failed to read response body: %w", err)
+					}
+					return mcp.NewToolResultError(fmt.Sprintf("failed to get user: %s", string(body))), nil
+				}
 
-			return mcp.NewToolResultText(string(r)), nil
-		}
+				r, err := json.Marshal(user)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal user: %w", err)
+				}
+
+				return mcp.NewToolResultText(string(r)), nil
+			}
+		},
+		Access:   ReadOnly,
+		Category: CategoryUsers,
+	}
 }
 
 // OptionalParamOK is a helper function that can be used to fetch a requested parameter from the request.
