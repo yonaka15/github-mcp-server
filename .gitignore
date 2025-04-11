@@ -3,3 +3,7 @@ cmd/github-mcp-server/github-mcp-server
 # Added by goreleaser init:
 dist/
 __debug_bin*
+
+# Explicitly allow vscode configuration
+.vscode/*
+!.vscode/launch.json
