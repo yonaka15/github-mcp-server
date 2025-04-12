@@ -259,7 +259,7 @@ func OptionalBoolParamWithDefault(r mcp.CallToolRequest, p string, d bool) (bool
 	if err != nil {
 		return false, err
 	}
-	if v == false {
+	if !v {
 		return d, nil
 	}
 	return v, nil
