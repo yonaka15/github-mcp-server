@@ -91,12 +91,14 @@ func NewServer(getClient GetClientFn, version string, readOnly bool, t translati
 	s.AddTool(GetCodeScanningAlert(getClient, t))
 	s.AddTool(ListCodeScanningAlerts(getClient, t))
 
-  // Add GitHub tools - Notifications
+	// Add GitHub tools - Notifications
+	s.AddTool(GetNotifications(getClient, t))
+	s.AddTool(GetNotificationThread(getClient, t))
 	if !readOnly {
-		s.AddTool(markNotificationRead(client, t))
-		s.AddTool(markAllNotificationsRead(client, t))
+		s.AddTool(MarkNotificationRead(getClient, t))
+		s.AddTool(MarkAllNotificationsRead(getClient, t))
 	}
-  
+
 	return s
 }
 
@@ -237,20 +239,6 @@ func OptionalIntParam(r mcp.CallToolRequest, p string) (int, error) {
 	return int(v), nil
 }
 
-// optionalParamWithDefault is a generic helper function that can be used to fetch a requested parameter from the request
-// with a default value if the parameter is not provided or is zero value.
-func optionalParamWithDefault[T comparable](r mcp.CallToolRequest, p string, d T) (T, error) {
-	var zero T
-	v, err := optionalParam[T](r, p)
-	if err != nil {
-		return zero, err
-	}
-	if v == zero {
-		return d, nil
-	}
-	return v, nil
-}
-
 // OptionalIntParamWithDefault is a helper function that can be used to fetch a requested parameter from the request
 // similar to optionalIntParam, but it also takes a default value.
 func OptionalIntParamWithDefault(r mcp.CallToolRequest, p string, d int) (int, error) {
@@ -259,6 +247,47 @@ func OptionalIntParamWithDefault(r mcp.CallToolRequest, p string, d int) (int, e
 		return 0, err
 	}
 	if v == 0 {
+		return d, nil
+	}
+	return v, nil
+}
+
+// OptionalBoolParamWithDefault is a helper function that can be used to fetch a requested parameter from the request
+// similar to optionalParam, but it also takes a default value.
+func OptionalBoolParamWithDefault(r mcp.CallToolRequest, p string, d bool) (bool, error) {
+	v, err := OptionalParam[bool](r, p)
+	if err != nil {
+		return false, err
+	}
+	if v == false {
+		return d, nil
+	}
+	return v, nil
+}
+
+// OptionalStringParam is a helper function that can be used to fetch a requested parameter from the request.
+// It does the following checks:
+// 1. Checks if the parameter is present in the request, if not, it returns its zero-value
+// 2. If it is present, it checks if the parameter is of the expected type and returns it
+func OptionalStringParam(r mcp.CallToolRequest, p string) (string, error) {
+	v, err := OptionalParam[string](r, p)
+	if err != nil {
+		return "", err
+	}
+	if v == "" {
+		return "", nil
+	}
+	return v, nil
+}
+
+// OptionalStringParamWithDefault is a helper function that can be used to fetch a requested parameter from the request
+// similar to optionalParam, but it also takes a default value.
+func OptionalStringParamWithDefault(r mcp.CallToolRequest, p string, d string) (string, error) {
+	v, err := OptionalParam[string](r, p)
+	if err != nil {
+		return "", err
+	}
+	if v == "" {
 		return d, nil
 	}
 	return v, nil

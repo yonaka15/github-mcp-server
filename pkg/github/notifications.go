@@ -15,7 +15,7 @@ import (
 )
 
 // getNotifications creates a tool to list notifications for the current user.
-func getNotifications(client *github.Client, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func GetNotifications(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("get_notifications",
 			mcp.WithDescription(t("TOOL_GET_NOTIFICATIONS_DESCRIPTION", "Get notifications for the authenticated GitHub user")),
 			mcp.WithBoolean("all",
@@ -38,33 +38,38 @@ func getNotifications(client *github.Client, t translations.TranslationHelperFun
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
+
 			// Extract optional parameters with defaults
-			all, err := optionalParamWithDefault[bool](request, "all", false)
+			all, err := OptionalBoolParamWithDefault(request, "all", false)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			participating, err := optionalParamWithDefault[bool](request, "participating", false)
+			participating, err := OptionalBoolParamWithDefault(request, "participating", false)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			since, err := optionalParam[string](request, "since")
+			since, err := OptionalStringParamWithDefault(request, "since", "")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			before, err := optionalParam[string](request, "before")
+			before, err := OptionalStringParam(request, "before")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			perPage, err := optionalIntParamWithDefault(request, "per_page", 30)
+			perPage, err := OptionalIntParamWithDefault(request, "per_page", 30)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			page, err := optionalIntParamWithDefault(request, "page", 1)
+			page, err := OptionalIntParamWithDefault(request, "page", 1)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -122,7 +127,7 @@ func getNotifications(client *github.Client, t translations.TranslationHelperFun
 }
 
 // markNotificationRead creates a tool to mark a notification as read.
-func markNotificationRead(client *github.Client, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func MarkNotificationRead(getclient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("mark_notification_read",
 			mcp.WithDescription(t("TOOL_MARK_NOTIFICATION_READ_DESCRIPTION", "Mark a notification as read")),
 			mcp.WithString("threadID",
@@ -131,6 +136,11 @@ func markNotificationRead(client *github.Client, t translations.TranslationHelpe
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			client, err := getclient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
+
 			threadID, err := requiredParam[string](request, "threadID")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
@@ -154,8 +164,8 @@ func markNotificationRead(client *github.Client, t translations.TranslationHelpe
 		}
 }
 
-// markAllNotificationsRead creates a tool to mark all notifications as read.
-func markAllNotificationsRead(client *github.Client, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+// MarkAllNotificationsRead creates a tool to mark all notifications as read.
+func MarkAllNotificationsRead(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("mark_all_notifications_read",
 			mcp.WithDescription(t("TOOL_MARK_ALL_NOTIFICATIONS_READ_DESCRIPTION", "Mark all notifications as read")),
 			mcp.WithString("lastReadAt",
@@ -163,7 +173,12 @@ func markAllNotificationsRead(client *github.Client, t translations.TranslationH
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			lastReadAt, err := optionalParam[string](request, "lastReadAt")
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
+
+			lastReadAt, err := OptionalStringParam(request, "lastReadAt")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -197,8 +212,8 @@ func markAllNotificationsRead(client *github.Client, t translations.TranslationH
 		}
 }
 
-// getNotificationThread creates a tool to get a specific notification thread.
-func getNotificationThread(client *github.Client, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+// GetNotificationThread creates a tool to get a specific notification thread.
+func GetNotificationThread(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("get_notification_thread",
 			mcp.WithDescription(t("TOOL_GET_NOTIFICATION_THREAD_DESCRIPTION", "Get a specific notification thread")),
 			mcp.WithString("threadID",
@@ -207,6 +222,11 @@ func getNotificationThread(client *github.Client, t translations.TranslationHelp
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
+
 			threadID, err := requiredParam[string](request, "threadID")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
