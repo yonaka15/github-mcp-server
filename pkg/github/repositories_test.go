@@ -18,7 +18,7 @@ import (
 func Test_GetFileContents(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := getFileContents(mockClient, translations.NullTranslationHelper)
+	tool, _ := GetFileContents(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "get_file_contents", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -132,7 +132,7 @@ func Test_GetFileContents(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := getFileContents(client, translations.NullTranslationHelper)
+			_, handler := GetFileContents(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := mcp.CallToolRequest{
@@ -189,7 +189,7 @@ func Test_GetFileContents(t *testing.T) {
 func Test_ForkRepository(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := forkRepository(mockClient, translations.NullTranslationHelper)
+	tool, _ := ForkRepository(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "fork_repository", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -259,7 +259,7 @@ func Test_ForkRepository(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := forkRepository(client, translations.NullTranslationHelper)
+			_, handler := ForkRepository(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -287,7 +287,7 @@ func Test_ForkRepository(t *testing.T) {
 func Test_CreateBranch(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := createBranch(mockClient, translations.NullTranslationHelper)
+	tool, _ := CreateBranch(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "create_branch", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -445,7 +445,7 @@ func Test_CreateBranch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := createBranch(client, translations.NullTranslationHelper)
+			_, handler := CreateBranch(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -475,10 +475,135 @@ func Test_CreateBranch(t *testing.T) {
 	}
 }
 
+func Test_GetCommit(t *testing.T) {
+	// Verify tool definition once
+	mockClient := github.NewClient(nil)
+	tool, _ := GetCommit(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+
+	assert.Equal(t, "get_commit", tool.Name)
+	assert.NotEmpty(t, tool.Description)
+	assert.Contains(t, tool.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.InputSchema.Properties, "sha")
+	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo", "sha"})
+
+	mockCommit := &github.RepositoryCommit{
+		SHA: github.Ptr("abc123def456"),
+		Commit: &github.Commit{
+			Message: github.Ptr("First commit"),
+			Author: &github.CommitAuthor{
+				Name:  github.Ptr("Test User"),
+				Email: github.Ptr("test@example.com"),
+				Date:  &github.Timestamp{Time: time.Now().Add(-48 * time.Hour)},
+			},
+		},
+		Author: &github.User{
+			Login: github.Ptr("testuser"),
+		},
+		HTMLURL: github.Ptr("https://github.com/owner/repo/commit/abc123def456"),
+		Stats: &github.CommitStats{
+			Additions: github.Ptr(10),
+			Deletions: github.Ptr(2),
+			Total:     github.Ptr(12),
+		},
+		Files: []*github.CommitFile{
+			{
+				Filename:  github.Ptr("file1.go"),
+				Status:    github.Ptr("modified"),
+				Additions: github.Ptr(10),
+				Deletions: github.Ptr(2),
+				Changes:   github.Ptr(12),
+				Patch:     github.Ptr("@@ -1,2 +1,10 @@"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		mockedClient   *http.Client
+		requestArgs    map[string]interface{}
+		expectError    bool
+		expectedCommit *github.RepositoryCommit
+		expectedErrMsg string
+	}{
+		{
+			name: "successful commit fetch",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposCommitsByOwnerByRepoByRef,
+					mockResponse(t, http.StatusOK, mockCommit),
+				),
+			),
+			requestArgs: map[string]interface{}{
+				"owner": "owner",
+				"repo":  "repo",
+				"sha":   "abc123def456",
+			},
+			expectError:    false,
+			expectedCommit: mockCommit,
+		},
+		{
+			name: "commit fetch fails",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposCommitsByOwnerByRepoByRef,
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+						_, _ = w.Write([]byte(`{"message": "Not Found"}`))
+					}),
+				),
+			),
+			requestArgs: map[string]interface{}{
+				"owner": "owner",
+				"repo":  "repo",
+				"sha":   "nonexistent-sha",
+			},
+			expectError:    true,
+			expectedErrMsg: "failed to get commit",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup client with mock
+			client := github.NewClient(tc.mockedClient)
+			_, handler := GetCommit(stubGetClientFn(client), translations.NullTranslationHelper)
+
+			// Create call request
+			request := createMCPRequest(tc.requestArgs)
+
+			// Call handler
+			result, err := handler(context.Background(), request)
+
+			// Verify results
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErrMsg)
+				return
+			}
+
+			require.NoError(t, err)
+
+			// Parse the result and get the text content if no error
+			textContent := getTextResult(t, result)
+
+			// Unmarshal and verify the result
+			var returnedCommit github.RepositoryCommit
+			err = json.Unmarshal([]byte(textContent.Text), &returnedCommit)
+			require.NoError(t, err)
+
+			assert.Equal(t, *tc.expectedCommit.SHA, *returnedCommit.SHA)
+			assert.Equal(t, *tc.expectedCommit.Commit.Message, *returnedCommit.Commit.Message)
+			assert.Equal(t, *tc.expectedCommit.Author.Login, *returnedCommit.Author.Login)
+			assert.Equal(t, *tc.expectedCommit.HTMLURL, *returnedCommit.HTMLURL)
+		})
+	}
+}
+
 func Test_ListCommits(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := listCommits(mockClient, translations.NullTranslationHelper)
+	tool, _ := ListCommits(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "list_commits", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -582,10 +707,10 @@ func Test_ListCommits(t *testing.T) {
 				),
 			),
 			requestArgs: map[string]interface{}{
-				"owner":    "owner",
-				"repo":     "repo",
-				"page":     float64(2),
-				"per_page": float64(10),
+				"owner":   "owner",
+				"repo":    "repo",
+				"page":    float64(2),
+				"perPage": float64(10),
 			},
 			expectError:     false,
 			expectedCommits: mockCommits,
@@ -614,7 +739,7 @@ func Test_ListCommits(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := listCommits(client, translations.NullTranslationHelper)
+			_, handler := ListCommits(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -652,7 +777,7 @@ func Test_ListCommits(t *testing.T) {
 func Test_CreateOrUpdateFile(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := createOrUpdateFile(mockClient, translations.NullTranslationHelper)
+	tool, _ := CreateOrUpdateFile(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "create_or_update_file", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -775,7 +900,7 @@ func Test_CreateOrUpdateFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := createOrUpdateFile(client, translations.NullTranslationHelper)
+			_, handler := CreateOrUpdateFile(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -815,7 +940,7 @@ func Test_CreateOrUpdateFile(t *testing.T) {
 func Test_CreateRepository(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := createRepository(mockClient, translations.NullTranslationHelper)
+	tool, _ := CreateRepository(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "create_repository", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -923,7 +1048,7 @@ func Test_CreateRepository(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := createRepository(client, translations.NullTranslationHelper)
+			_, handler := CreateRepository(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -961,7 +1086,7 @@ func Test_CreateRepository(t *testing.T) {
 func Test_PushFiles(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := pushFiles(mockClient, translations.NullTranslationHelper)
+	tool, _ := PushFiles(stubGetClientFn(mockClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "push_files", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -1256,7 +1381,7 @@ func Test_PushFiles(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := pushFiles(client, translations.NullTranslationHelper)
+			_, handler := PushFiles(stubGetClientFn(client), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -1290,6 +1415,116 @@ func Test_PushFiles(t *testing.T) {
 
 			assert.Equal(t, *tc.expectedRef.Ref, *returnedRef.Ref)
 			assert.Equal(t, *tc.expectedRef.Object.SHA, *returnedRef.Object.SHA)
+		})
+	}
+}
+
+func Test_ListBranches(t *testing.T) {
+	// Verify tool definition once
+	mockClient := github.NewClient(nil)
+	tool, _ := ListBranches(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+
+	assert.Equal(t, "list_branches", tool.Name)
+	assert.NotEmpty(t, tool.Description)
+	assert.Contains(t, tool.InputSchema.Properties, "owner")
+	assert.Contains(t, tool.InputSchema.Properties, "repo")
+	assert.Contains(t, tool.InputSchema.Properties, "page")
+	assert.Contains(t, tool.InputSchema.Properties, "perPage")
+	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
+
+	// Setup mock branches for success case
+	mockBranches := []*github.Branch{
+		{
+			Name:   github.Ptr("main"),
+			Commit: &github.RepositoryCommit{SHA: github.Ptr("abc123")},
+		},
+		{
+			Name:   github.Ptr("develop"),
+			Commit: &github.RepositoryCommit{SHA: github.Ptr("def456")},
+		},
+	}
+
+	// Test cases
+	tests := []struct {
+		name          string
+		args          map[string]interface{}
+		mockResponses []mock.MockBackendOption
+		wantErr       bool
+		errContains   string
+	}{
+		{
+			name: "success",
+			args: map[string]interface{}{
+				"owner": "owner",
+				"repo":  "repo",
+				"page":  float64(2),
+			},
+			mockResponses: []mock.MockBackendOption{
+				mock.WithRequestMatch(
+					mock.GetReposBranchesByOwnerByRepo,
+					mockBranches,
+				),
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing owner",
+			args: map[string]interface{}{
+				"repo": "repo",
+			},
+			mockResponses: []mock.MockBackendOption{},
+			wantErr:       false,
+			errContains:   "missing required parameter: owner",
+		},
+		{
+			name: "missing repo",
+			args: map[string]interface{}{
+				"owner": "owner",
+			},
+			mockResponses: []mock.MockBackendOption{},
+			wantErr:       false,
+			errContains:   "missing required parameter: repo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mock client
+			mockClient := github.NewClient(mock.NewMockedHTTPClient(tt.mockResponses...))
+			_, handler := ListBranches(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+
+			// Create request
+			request := createMCPRequest(tt.args)
+
+			// Call handler
+			result, err := handler(context.Background(), request)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			if tt.errContains != "" {
+				textContent := getTextResult(t, result)
+				assert.Contains(t, textContent.Text, tt.errContains)
+				return
+			}
+
+			textContent := getTextResult(t, result)
+			require.NotEmpty(t, textContent.Text)
+
+			// Verify response
+			var branches []*github.Branch
+			err = json.Unmarshal([]byte(textContent.Text), &branches)
+			require.NoError(t, err)
+			assert.Len(t, branches, 2)
+			assert.Equal(t, "main", *branches[0].Name)
+			assert.Equal(t, "develop", *branches[1].Name)
 		})
 	}
 }

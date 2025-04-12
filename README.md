@@ -15,7 +15,8 @@ automation and interaction capabilities for developers and tools.
 ## Prerequisites
 
 1. To run the server in a container, you will need to have [Docker](https://www.docker.com/) installed.
-2. [Create a GitHub Personal Access Token](https://github.com/settings/personal-access-tokens/new).
+2. Once Docker is installed, you will also need to ensure Docker is running.
+3. Lastly you will need to [Create a GitHub Personal Access Token](https://github.com/settings/personal-access-tokens/new).
 The MCP server can use many of the GitHub APIs, so enable the permissions that you feel comfortable granting your AI tools (to learn more about access tokens, please check out the [documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)).
 
 
@@ -153,6 +154,12 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `repo`: Repository name (string, required)
   - `issue_number`: Issue number (number, required)
 
+- **get_issue_comments** - Get comments for a GitHub issue
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `issue_number`: Issue number (number, required)
+
 - **create_issue** - Create a new issue in a GitHub repository
 
   - `owner`: Repository owner (string, required)
@@ -198,7 +205,7 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `sort`: Sort field (string, optional)
   - `order`: Sort order (string, optional)
   - `page`: Page number (number, optional)
-  - `per_page`: Results per page (number, optional)
+  - `perPage`: Results per page (number, optional)
 
 ### Pull Requests
 
@@ -266,7 +273,9 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `body`: Review comment text (string, optional)
   - `event`: Review action ('APPROVE', 'REQUEST_CHANGES', 'COMMENT') (string, required)
   - `commitId`: SHA of commit to review (string, optional)
-  - `comments`: Line-specific comments array of objects, each object with path (string), position (number), and body (string) (array, optional)
+  - `comments`: Line-specific comments array of objects to place comments on pull request changes (array, optional)
+    - For inline comments: provide `path`, `position` (or `line`), and `body`
+    - For multi-line comments: provide `path`, `start_line`, `line`, optional `side`/`start_side`, and `body`
 
 - **create_pull_request** - Create a new pull request
 
@@ -277,6 +286,32 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `head`: Branch containing changes (string, required)
   - `base`: Branch to merge into (string, required)
   - `draft`: Create as draft PR (boolean, optional)
+  - `maintainer_can_modify`: Allow maintainer edits (boolean, optional)
+
+- **add_pull_request_review_comment** - Add a review comment to a pull request or reply to an existing comment
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `pull_number`: Pull request number (number, required)
+  - `body`: The text of the review comment (string, required)
+  - `commit_id`: The SHA of the commit to comment on (string, required unless using in_reply_to)
+  - `path`: The relative path to the file that necessitates a comment (string, required unless using in_reply_to)
+  - `line`: The line of the blob in the pull request diff that the comment applies to (number, optional)
+  - `side`: The side of the diff to comment on (LEFT or RIGHT) (string, optional)
+  - `start_line`: For multi-line comments, the first line of the range (number, optional)
+  - `start_side`: For multi-line comments, the starting side of the diff (LEFT or RIGHT) (string, optional)
+  - `subject_type`: The level at which the comment is targeted (line or file) (string, optional)
+  - `in_reply_to`: The ID of the review comment to reply to (number, optional). When specified, only body is required and other parameters are ignored.
+
+- **update_pull_request** - Update an existing pull request in a GitHub repository
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `pullNumber`: Pull request number to update (number, required)
+  - `title`: New title (string, optional)
+  - `body`: New description (string, optional)
+  - `state`: New state ('open' or 'closed') (string, optional)
+  - `base`: New base branch name (string, optional)
   - `maintainer_can_modify`: Allow maintainer edits (boolean, optional)
 
 ### Repositories
@@ -290,6 +325,13 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `content`: File content (string, required)
   - `branch`: Branch name (string, optional)
   - `sha`: File SHA if updating (string, optional)
+
+- **list_branches** - List branches in a GitHub repository
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `page`: Page number (number, optional)
+  - `perPage`: Results per page (number, optional)
 
 - **push_files** - Push multiple files in a single commit
 
@@ -334,13 +376,20 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `branch`: New branch name (string, required)
   - `sha`: SHA to create branch from (string, required)
 
-- **list_commits** - Gets commits of a branch in a repository
+- **list_commits** - Get a list of commits of a branch in a repository
   - `owner`: Repository owner (string, required)
   - `repo`: Repository name (string, required)
   - `sha`: Branch name, tag, or commit SHA (string, optional)
   - `path`: Only commits containing this file path (string, optional)
   - `page`: Page number (number, optional)
   - `perPage`: Results per page (number, optional)
+
+- **get_commit** - Get details for a commit from a repository
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `sha`: Commit SHA, branch name, or tag name (string, required)
+  - `page`: Page number, for files in the commit (number, optional)
+  - `perPage`: Results per page, for files in the commit (number, optional)
 
 ### Search
 
@@ -426,6 +475,10 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
     - `repo`: Repository name (string, required)
     - `prNumber`: Pull request number (string, required)
     - `path`: File or directory path (string, optional)
+
+## Library Usage
+
+The exported Go API of this module should currently be considered unstable, and subject to breaking changes. In the future, we may offer stability; please file an issue if there is a use case where this would be valuable.
 
 ## License
 
