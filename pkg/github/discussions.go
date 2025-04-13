@@ -11,19 +11,29 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+// Comment represents a comment on a GitHub Discussion
+type Comment struct {
+	ID        string `json:"id"`
+	Body      string `json:"body"`
+	CreatedAt string `json:"createdAt"`
+	Author    string `json:"author"`
+}
+
 // Discussion represents a GitHub Discussion with its essential fields
 type Discussion struct {
-	ID          string `json:"id"`
-	Number      int    `json:"number"`
-	Title       string `json:"title"`
-	Body        string `json:"body"`
-	CreatedAt   string `json:"createdAt"`
-	UpdatedAt   string `json:"updatedAt"`
-	URL         string `json:"url"`
-	Category    string `json:"category"`
-	Author      string `json:"author"`
-	Locked      bool   `json:"locked"`
-	UpvoteCount int    `json:"upvoteCount"`
+	ID           string    `json:"id"`
+	Number       int       `json:"number"`
+	Title        string    `json:"title"`
+	Body         string    `json:"body"`
+	CreatedAt    string    `json:"createdAt"`
+	UpdatedAt    string    `json:"updatedAt"`
+	URL          string    `json:"url"`
+	Category     string    `json:"category"`
+	Author       string    `json:"author"`
+	Locked       bool      `json:"locked"`
+	UpvoteCount  int       `json:"upvoteCount"`
+	CommentCount int       `json:"commentCount"`
+	Comments     []Comment `json:"comments,omitempty"`
 }
 
 // GetRepositoryDiscussions creates a tool to fetch discussions from a specific repository.
@@ -68,11 +78,10 @@ func GetRepositoryDiscussions(getGraphQLClient GetGraphQLClientFn, t translation
 
 			// Define GraphQL query variables
 			variables := map[string]interface{}{
-				"owner":      githubv4.String(owner),
-				"name":       githubv4.String(repo),
-				"first":      githubv4.Int(pagination.perPage),
-				"after":      (*githubv4.String)(nil), // For pagination - null means first page
-				"categoryId": (*githubv4.ID)(nil),     // For category ID - null means no filter
+				"owner": githubv4.String(owner),
+				"name":  githubv4.String(repo),
+				"first": githubv4.Int(pagination.perPage),
+				"after": (*githubv4.String)(nil), // For pagination - null means first page
 			}
 
 			// For pagination beyond the first page
@@ -84,11 +93,7 @@ func GetRepositoryDiscussions(getGraphQLClient GetGraphQLClientFn, t translation
 				variables["after"] = &cursorStr
 			}
 
-			if categoryId != "" {
-				variables["categoryId"] = githubv4.ID(categoryId)
-			}
-
-			// Define the GraphQL query structure
+			// Define the GraphQL query structure and query string based on whether categoryId is provided
 			var query struct {
 				Repository struct {
 					Discussions struct {
@@ -109,42 +114,87 @@ func GetRepositoryDiscussions(getGraphQLClient GetGraphQLClientFn, t translation
 							}
 							Locked      bool
 							UpvoteCount int
+							Comments    struct {
+								TotalCount int
+								Nodes      []struct {
+									ID        githubv4.ID
+									Body      string
+									CreatedAt githubv4.DateTime
+									Author    struct {
+										Login string
+									}
+								}
+							} `graphql:"comments(first: 10)"`
 						}
 						PageInfo struct {
 							EndCursor   githubv4.String
 							HasNextPage bool
 						}
-					} `graphql:"discussions(first: $first, after: $after, categoryId: $categoryId)"`
+					} `graphql:"discussions(first: $first, after: $after)"`
 				} `graphql:"repository(owner: $owner, name: $name)"`
 			}
 
-			// Only include categoryId in the query if it was provided
-			if categoryId == "" {
-				// Redefine the query without the categoryId filter
-				query.Repository.Discussions = struct {
-					TotalCount int
-					Nodes      []struct {
-						ID        githubv4.ID
-						Number    int
-						Title     string
-						Body      string
-						CreatedAt githubv4.DateTime
-						UpdatedAt githubv4.DateTime
-						URL       githubv4.URI
-						Category  struct {
-							Name string
-						}
-						Author struct {
-							Login string
-						}
-						Locked      bool
-						UpvoteCount int
+			// Define a type for the Discussions GraphQL query to avoid duplication
+			type discussionQueryType struct {
+				TotalCount int
+				Nodes      []struct {
+					ID        githubv4.ID
+					Number    int
+					Title     string
+					Body      string
+					CreatedAt githubv4.DateTime
+					UpdatedAt githubv4.DateTime
+					URL       githubv4.URI
+					Category  struct {
+						Name string
 					}
-					PageInfo struct {
-						EndCursor   githubv4.String
-						HasNextPage bool
+					Author struct {
+						Login string
 					}
-				}{}
+					Locked      bool
+					UpvoteCount int
+					Comments    struct {
+						TotalCount int
+						Nodes      []struct {
+							ID        githubv4.ID
+							Body      string
+							CreatedAt githubv4.DateTime
+							Author    struct {
+								Login string
+							}
+						}
+					} `graphql:"comments(first: 10)"`
+				}
+				PageInfo struct {
+					EndCursor   githubv4.String
+					HasNextPage bool
+				}
+			}
+
+			// Add categoryId to query if it was provided
+			if categoryId != "" {
+				variables["categoryId"] = githubv4.ID(categoryId)
+				// Use a separate query structure that includes the categoryId parameter
+				var queryWithCategory struct {
+					Repository struct {
+						Discussions discussionQueryType `graphql:"discussions(first: $first, after: $after, categoryId: $categoryId)"`
+					} `graphql:"repository(owner: $owner, name: $name)"`
+				}
+
+				// Execute the query with categoryId
+				err = client.Query(ctx, &queryWithCategory, variables)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query discussions with category: %w", err)
+				}
+
+				// Copy the results to our main query structure
+				query.Repository.Discussions = queryWithCategory.Repository.Discussions
+			} else {
+				// Execute the original query without categoryId
+				err = client.Query(ctx, &query, variables)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query discussions: %w", err)
+				}
 			}
 
 			// Execute the GraphQL query
@@ -156,18 +206,32 @@ func GetRepositoryDiscussions(getGraphQLClient GetGraphQLClientFn, t translation
 			// Convert the GraphQL response to our Discussion type
 			discussions := make([]Discussion, 0, len(query.Repository.Discussions.Nodes))
 			for _, node := range query.Repository.Discussions.Nodes {
+				// Process comments for this discussion
+				comments := make([]Comment, 0, len(node.Comments.Nodes))
+				for _, commentNode := range node.Comments.Nodes {
+					comment := Comment{
+						ID:        fmt.Sprintf("%v", commentNode.ID),
+						Body:      commentNode.Body,
+						CreatedAt: commentNode.CreatedAt.String(),
+						Author:    commentNode.Author.Login,
+					}
+					comments = append(comments, comment)
+				}
+
 				discussion := Discussion{
-					ID:          fmt.Sprintf("%v", node.ID),
-					Number:      node.Number,
-					Title:       node.Title,
-					Body:        node.Body,
-					CreatedAt:   node.CreatedAt.String(),
-					UpdatedAt:   node.UpdatedAt.String(),
-					URL:         node.URL.String(),
-					Category:    node.Category.Name,
-					Author:      node.Author.Login,
-					Locked:      node.Locked,
-					UpvoteCount: node.UpvoteCount,
+					ID:           fmt.Sprintf("%v", node.ID),
+					Number:       node.Number,
+					Title:        node.Title,
+					Body:         node.Body,
+					CreatedAt:    node.CreatedAt.String(),
+					UpdatedAt:    node.UpdatedAt.String(),
+					URL:          node.URL.String(),
+					Category:     node.Category.Name,
+					Author:       node.Author.Login,
+					Locked:       node.Locked,
+					UpvoteCount:  node.UpvoteCount,
+					CommentCount: node.Comments.TotalCount,
+					Comments:     comments,
 				}
 				discussions = append(discussions, discussion)
 			}
