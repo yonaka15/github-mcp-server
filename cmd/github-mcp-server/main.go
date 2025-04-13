@@ -15,9 +15,11 @@ import (
 	gogithub "github.com/google/go-github/v69/github"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/oauth2"
 )
 
 var version = "version"
@@ -119,8 +121,19 @@ func runStdioServer(cfg runConfig) error {
 	if token == "" {
 		cfg.logger.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN not set")
 	}
-	ghClient := gogithub.NewClient(nil).WithAuthToken(token)
+
+	// Create OAuth2 token source
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	httpClient := oauth2.NewClient(ctx, ts)
+
+	// Create REST API client
+	ghClient := gogithub.NewClient(httpClient)
 	ghClient.UserAgent = fmt.Sprintf("github-mcp-server/%s", version)
+
+	// Create GraphQL client
+	graphqlClient := githubv4.NewClient(httpClient)
 
 	// Check GH_HOST env var first, then fall back to viper config
 	host := os.Getenv("GH_HOST")
@@ -134,6 +147,9 @@ func runStdioServer(cfg runConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to create GitHub client with host: %w", err)
 		}
+
+		// Also update GraphQL endpoint for enterprise if needed
+		graphqlClient = githubv4.NewEnterpriseClient(fmt.Sprintf("https://%s/api/graphql", host), httpClient)
 	}
 
 	t, dumpTranslations := translations.TranslationHelper()
@@ -146,11 +162,16 @@ func runStdioServer(cfg runConfig) error {
 		return ghClient, nil // closing over client
 	}
 
+	// Add function to get GraphQL client
+	getGraphQLClient := func(_ context.Context) (*githubv4.Client, error) {
+		return graphqlClient, nil // closing over graphql client
+	}
+
 	hooks := &server.Hooks{
 		OnBeforeInitialize: []server.OnBeforeInitializeFunc{beforeInit},
 	}
 	// Create
-	ghServer := github.NewServer(getClient, version, cfg.readOnly, t, server.WithHooks(hooks))
+	ghServer := github.NewServer(getClient, getGraphQLClient, version, cfg.readOnly, t, server.WithHooks(hooks))
 	stdioServer := server.NewStdioServer(ghServer)
 
 	stdLogger := stdlog.New(cfg.logger.Writer(), "stdioserver", 0)

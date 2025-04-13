@@ -12,12 +12,14 @@ import (
 	"github.com/google/go-github/v69/github"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/shurcooL/githubv4"
 )
 
 type GetClientFn func(context.Context) (*github.Client, error)
+type GetGraphQLClientFn func(context.Context) (*githubv4.Client, error)
 
 // NewServer creates a new GitHub MCP server with the specified GH client and logger.
-func NewServer(getClient GetClientFn, version string, readOnly bool, t translations.TranslationHelperFunc, opts ...server.ServerOption) *server.MCPServer {
+func NewServer(getClient GetClientFn, getGraphQLClient GetGraphQLClientFn, version string, readOnly bool, t translations.TranslationHelperFunc, opts ...server.ServerOption) *server.MCPServer {
 	// Add default options
 	defaultOpts := []server.ServerOption{
 		server.WithResourceCapabilities(true, true),
@@ -90,6 +92,10 @@ func NewServer(getClient GetClientFn, version string, readOnly bool, t translati
 	// Add GitHub tools - Code Scanning
 	s.AddTool(GetCodeScanningAlert(getClient, t))
 	s.AddTool(ListCodeScanningAlerts(getClient, t))
+
+	// Add GitHub tools - Discussions (GraphQL)
+	s.AddTool(GetRepositoryDiscussions(getGraphQLClient, t))
+
 	return s
 }
 

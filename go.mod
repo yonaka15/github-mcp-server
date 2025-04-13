@@ -8,10 +8,12 @@ require (
 	github.com/google/go-github/v69 v69.2.0
 	github.com/mark3labs/mcp-go v0.18.0
 	github.com/migueleliasweb/go-github-mock v1.1.0
+	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/oauth2 v0.29.0
 )
 
 require (
@@ -41,6 +43,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
