@@ -76,10 +76,7 @@ func GetRepositoryDiscussions(getGraphQLClient GetGraphQLClientFn, t translation
 			}
 
 			// For pagination beyond the first page
-			// TODO: Fix this to use actual cursor values
-			// This is a placeholder for the cursor logic
-			// In a real implementation, you should store and use actual cursor values
-			if pagination.perPage > 0 && pagination.page > 1 {
+			// TODO Fix
 			if pagination.page > 1 {
 				// We'd need an actual cursor here, but for simplicity we'll compute a rough offset
 				// In real implementation, you should store and use actual cursor values
