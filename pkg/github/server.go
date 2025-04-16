@@ -97,6 +97,7 @@ func NewServer(getClient GetClientFn, version string, readOnly bool, t translati
 	if !readOnly {
 		s.AddTool(MarkNotificationRead(getClient, t))
 		s.AddTool(MarkAllNotificationsRead(getClient, t))
+		s.AddTool(MarkNotificationDone(getClient, t))
 	}
 
 	return s

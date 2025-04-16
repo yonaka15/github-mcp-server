@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/github/github-mcp-server/pkg/translations"
@@ -252,5 +253,48 @@ func GetNotificationThread(getClient GetClientFn, t translations.TranslationHelp
 			}
 
 			return mcp.NewToolResultText(string(r)), nil
+		}
+}
+
+// markNotificationDone creates a tool to mark a notification as done.
+func MarkNotificationDone(getclient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	return mcp.NewTool("mark_notification_done",
+			mcp.WithDescription(t("TOOL_MARK_NOTIFICATION_DONE_DESCRIPTION", "Mark a notification as done")),
+			mcp.WithString("threadID",
+				mcp.Required(),
+				mcp.Description("The ID of the notification thread"),
+			),
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			client, err := getclient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
+
+			threadIDStr, err := requiredParam[string](request, "threadID")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			threadID, err := strconv.ParseInt(threadIDStr, 10, 64)
+			if err != nil {
+				return mcp.NewToolResultError("Invalid threadID: must be a numeric value"), nil
+			}
+
+			resp, err := client.Activity.MarkThreadDone(ctx, threadID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to mark notification as done: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusResetContent && resp.StatusCode != http.StatusOK {
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, fmt.Errorf("failed to read response body: %w", err)
+				}
+				return mcp.NewToolResultError(fmt.Sprintf("failed to mark notification as done: %s", string(body))), nil
+			}
+
+			return mcp.NewToolResultText("Notification marked as done"), nil
 		}
 }
