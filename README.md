@@ -21,28 +21,6 @@ The MCP server can use many of the GitHub APIs, so enable the permissions that y
 
 ## Installation
 
-### Usage with Claude Desktop
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
-      }
-    }
-  }
-```
-
 ### Usage with VS Code
 
 For quick installation, use one of the one-click install buttons at the top of this README.
@@ -85,6 +63,28 @@ Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace
 ```
 
 More about using MCP server tools in VS Code's [agent mode documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
+
+### Usage with Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    }
+  }
+```
 
 ### Using Mise for Installation
 
