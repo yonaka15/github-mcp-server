@@ -84,6 +84,7 @@ More about using MCP server tools in VS Code's [agent mode documentation](https:
       }
     }
   }
+}
 ```
 
 ### Using Mise for Installation
