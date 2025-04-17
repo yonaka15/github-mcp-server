@@ -21,6 +21,28 @@ The MCP server can use many of the GitHub APIs, so enable the permissions that y
 
 ## Installation
 
+### Usage with Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    }
+  }
+```
+
 ### Usage with VS Code
 
 For quick installation, use one of the one-click install buttons at the top of this README.
@@ -64,28 +86,25 @@ Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace
 
 More about using MCP server tools in VS Code's [agent mode documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 
-### Usage with Claude Desktop
+### Using Mise for Installation
 
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
-      }
-    }
-  }
-}
-```
+To quickly configure and deploy the GitHub MCP Server in your environment, you can use **[Mise](https://mise.jdx.dev)**, a deployment and configuration tool optimized for developer workflows.
+
+Here’s how to get started:
+
+1. Install `mise` by following the installation instructions at [https://mise.jdx.dev](https://mise.jdx.dev).
+2. Use the following command to deploy the GitHub MCP Server configuration:
+
+   ```bash
+   mise deploy github-mcp-server --token=<YOUR_PERSONAL_ACCESS_TOKEN> --use-docker
+   ```
+
+   - Replace `<YOUR_PERSONAL_ACCESS_TOKEN>` with your GitHub personal access token.
+   - Use `--use-docker` to run the server via Docker.
+
+3. Confirm that the server is running using `mise status`.
+
+For more details, see [Mise's official documentation](https://mise.jdx.dev/docs).
 
 ### Build from source
 
