@@ -36,9 +36,9 @@ func ListNotifications(getClient GetClientFn, t translations.TranslationHelperFu
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			all, err := OptionalBoolParamWithDefault(request, "all", false) // Default to false unless specified
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+			all := false
+			if val, err := OptionalParam[bool](request, "all"); err == nil {
+				all = val
 			}
 
 			opts := &github.NotificationListOptions{
