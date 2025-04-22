@@ -41,10 +41,6 @@ func ListNotifications(getClient GetClientFn, t translations.TranslationHelperFu
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			if request.Params.Arguments["all"] == true {
-				all = true // Set to true if user explicitly asks for all notifications
-			}
-
 			opts := &github.NotificationListOptions{
 				ListOptions: github.ListOptions{
 					Page:    page,
@@ -71,18 +67,7 @@ func ListNotifications(getClient GetClientFn, t translations.TranslationHelperFu
 				return mcp.NewToolResultError(fmt.Sprintf("failed to list notifications: %s", string(body))), nil
 			}
 
-			// Extract the notification title in addition to reason, url, and timestamp.
-			var extractedNotifications []map[string]interface{}
-			for _, notification := range notifications {
-				extractedNotifications = append(extractedNotifications, map[string]interface{}{
-					"title":     notification.GetSubject().GetTitle(),
-					"reason":    notification.GetReason(),
-					"url":       notification.GetURL(),
-					"timestamp": notification.GetUpdatedAt(),
-				})
-			}
-
-			r, err := json.Marshal(extractedNotifications)
+			r, err := json.Marshal(notifications)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal notifications: %w", err)
 			}

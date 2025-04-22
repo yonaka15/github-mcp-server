@@ -437,6 +437,14 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `state`: Alert state (string, optional)
   - `severity`: Alert severity (string, optional)
 
+### Notifications
+
+- **list_notifications** - List notifications for a GitHub user
+
+  - `page`: Page number (number, optional, default: 1)
+  - `per_page`: Number of records per page (number, optional, default: 30)
+  - `all`: Whether to fetch all notifications, including read ones (boolean, optional, default: false)
+
 ## Resources
 
 ### Repository Content

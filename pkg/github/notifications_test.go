@@ -28,22 +28,22 @@ func Test_ListNotifications(t *testing.T) {
 	// Setup mock notifications
 	mockNotifications := []*github.Notification{
 		{
-			ID:     github.String("1"),
-			Reason: github.String("mention"),
+			ID:     github.Ptr("1"),
+			Reason: github.Ptr("mention"),
 			Subject: &github.NotificationSubject{
-				Title: github.String("Test Notification 1"),
+				Title: github.Ptr("Test Notification 1"),
 			},
 			UpdatedAt: &github.Timestamp{Time: time.Now()},
-			URL:       github.String("https://example.com/notifications/threads/1"),
+			URL:       github.Ptr("https://example.com/notifications/threads/1"),
 		},
 		{
-			ID:     github.String("2"),
-			Reason: github.String("team_mention"),
+			ID:     github.Ptr("2"),
+			Reason: github.Ptr("team_mention"),
 			Subject: &github.NotificationSubject{
-				Title: github.String("Test Notification 2"),
+				Title: github.Ptr("Test Notification 2"),
 			},
 			UpdatedAt: &github.Timestamp{Time: time.Now()},
-			URL:       github.String("https://example.com/notifications/threads/1"),
+			URL:       github.Ptr("https://example.com/notifications/threads/1"),
 		},
 	}
 
@@ -112,15 +112,9 @@ func Test_ListNotifications(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, len(tc.expectedResponse), len(returnedNotifications))
 			for i, notification := range returnedNotifications {
-				// Ensure all required fields are mocked
-				assert.NotNil(t, notification.Subject, "Subject should not be nil")
-				assert.NotNil(t, notification.Subject.Title, "Title should not be nil")
-				assert.NotNil(t, notification.Reason, "Reason should not be nil")
-				assert.NotNil(t, notification.URL, "URL should not be nil")
-				assert.NotNil(t, notification.UpdatedAt, "UpdatedAt should not be nil")
-				// assert.Equal(t, *tc.expectedResponse[i].ID, *notification.ID)
+				assert.Equal(t, *tc.expectedResponse[i].ID, *notification.ID)
 				assert.Equal(t, *tc.expectedResponse[i].Reason, *notification.Reason)
-				// assert.Equal(t, *tc.expectedResponse[i].Subject.Title, *notification.Subject.Title)
+				assert.Equal(t, *tc.expectedResponse[i].Subject.Title, *notification.Subject.Title)
 			}
 		})
 	}
