@@ -138,7 +138,7 @@ func OptionalBoolParamWithDefault(request mcp.CallToolRequest, s string, b bool)
 	if err != nil {
 		return false, err
 	}
-	if b == false {
+	if !b {
 		return b, nil
 	}
 	return v, nil
