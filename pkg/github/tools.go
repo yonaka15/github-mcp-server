@@ -88,6 +88,7 @@ func InitToolsets(passedToolsets []string, readOnly bool, getClient GetClientFn,
 		).
 		AddWriteTools(
 			toolsets.NewServerTool(CreateGist(getClient, t)),
+			toolsets.NewServerTool(UpdateGist(getClient, t)),
 		)
 
 	// Add toolsets to the group

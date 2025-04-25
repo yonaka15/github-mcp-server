@@ -341,3 +341,167 @@ func Test_CreateGist(t *testing.T) {
 		})
 	}
 }
+
+func Test_UpdateGist(t *testing.T) {
+	// Verify tool definition
+	mockClient := github.NewClient(nil)
+	tool, _ := UpdateGist(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+
+	assert.Equal(t, "update_gist", tool.Name)
+	assert.NotEmpty(t, tool.Description)
+	assert.Contains(t, tool.InputSchema.Properties, "gist_id")
+	assert.Contains(t, tool.InputSchema.Properties, "description")
+	assert.Contains(t, tool.InputSchema.Properties, "filename")
+	assert.Contains(t, tool.InputSchema.Properties, "content")
+
+	// Verify required parameters
+	assert.Contains(t, tool.InputSchema.Required, "gist_id")
+	assert.Contains(t, tool.InputSchema.Required, "filename")
+	assert.Contains(t, tool.InputSchema.Required, "content")
+
+	// Setup mock data for test cases
+	updatedGist := &github.Gist{
+		ID:          github.Ptr("existing-gist-id"),
+		Description: github.Ptr("Updated Test Gist"),
+		HTMLURL:     github.Ptr("https://gist.github.com/user/existing-gist-id"),
+		Public:      github.Ptr(true),
+		UpdatedAt:   &github.Timestamp{Time: time.Now()},
+		Owner:       &github.User{Login: github.Ptr("user")},
+		Files: map[github.GistFilename]github.GistFile{
+			"updated.go": {
+				Filename: github.Ptr("updated.go"),
+				Content:  github.Ptr("package main\n\nfunc main() {\n\tfmt.Println(\"Updated Gist!\")\n}"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		mockedClient   *http.Client
+		requestArgs    map[string]interface{}
+		expectError    bool
+		expectedErrMsg string
+		expectedGist   *github.Gist
+	}{
+		{
+			name: "update gist successfully",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.PatchGistsByGistId,
+					mockResponse(t, http.StatusOK, updatedGist),
+				),
+			),
+			requestArgs: map[string]interface{}{
+				"gist_id":     "existing-gist-id",
+				"filename":    "updated.go",
+				"content":     "package main\n\nfunc main() {\n\tfmt.Println(\"Updated Gist!\")\n}",
+				"description": "Updated Test Gist",
+			},
+			expectError:  false,
+			expectedGist: updatedGist,
+		},
+		{
+			name:         "missing required gist_id",
+			mockedClient: mock.NewMockedHTTPClient(),
+			requestArgs: map[string]interface{}{
+				"filename":    "updated.go",
+				"content":     "updated content",
+				"description": "Updated Test Gist",
+			},
+			expectError:    true,
+			expectedErrMsg: "missing required parameter: gist_id",
+		},
+		{
+			name:         "missing required filename",
+			mockedClient: mock.NewMockedHTTPClient(),
+			requestArgs: map[string]interface{}{
+				"gist_id":     "existing-gist-id",
+				"content":     "updated content",
+				"description": "Updated Test Gist",
+			},
+			expectError:    true,
+			expectedErrMsg: "missing required parameter: filename",
+		},
+		{
+			name:         "missing required content",
+			mockedClient: mock.NewMockedHTTPClient(),
+			requestArgs: map[string]interface{}{
+				"gist_id":     "existing-gist-id",
+				"filename":    "updated.go",
+				"description": "Updated Test Gist",
+			},
+			expectError:    true,
+			expectedErrMsg: "missing required parameter: content",
+		},
+		{
+			name: "api returns error",
+			mockedClient: mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.PatchGistsByGistId,
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+						_, _ = w.Write([]byte(`{"message": "Not Found"}`))
+					}),
+				),
+			),
+			requestArgs: map[string]interface{}{
+				"gist_id":     "nonexistent-gist-id",
+				"filename":    "updated.go",
+				"content":     "package main",
+				"description": "Updated Test Gist",
+			},
+			expectError:    true,
+			expectedErrMsg: "failed to update gist",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup client with mock
+			client := github.NewClient(tc.mockedClient)
+			_, handler := UpdateGist(stubGetClientFn(client), translations.NullTranslationHelper)
+
+			// Create call request
+			request := createMCPRequest(tc.requestArgs)
+
+			// Call handler
+			result, err := handler(context.Background(), request)
+
+			// Verify results
+			if tc.expectError {
+				if err != nil {
+					assert.Contains(t, err.Error(), tc.expectedErrMsg)
+				} else {
+					// For errors returned as part of the result, not as an error
+					assert.NotNil(t, result)
+					textContent := getTextResult(t, result)
+					assert.Contains(t, textContent.Text, tc.expectedErrMsg)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, result)
+
+			// Parse the result and get the text content
+			textContent := getTextResult(t, result)
+
+			// Unmarshal and verify the result
+			var gist *github.Gist
+			err = json.Unmarshal([]byte(textContent.Text), &gist)
+			require.NoError(t, err)
+
+			assert.Equal(t, *tc.expectedGist.ID, *gist.ID)
+			assert.Equal(t, *tc.expectedGist.Description, *gist.Description)
+			assert.Equal(t, *tc.expectedGist.HTMLURL, *gist.HTMLURL)
+
+			// Verify file content
+			for filename, expectedFile := range tc.expectedGist.Files {
+				actualFile, exists := gist.Files[filename]
+				assert.True(t, exists)
+				assert.Equal(t, *expectedFile.Filename, *actualFile.Filename)
+				assert.Equal(t, *expectedFile.Content, *actualFile.Content)
+			}
+		})
+	}
+}
