@@ -198,7 +198,7 @@ func ManageNotifications(getClient GetClientFn, t translations.TranslationHelper
 					if err != nil {
 						return nil, fmt.Errorf("failed to read response body: %w", err)
 					}
-					return mcp.NewToolResultError(fmt.Sprintf("failed to mark notification as done: %s", string(body))), nil
+					return mcp.NewToolResultError(fmt.Sprintf("failed to mark all notifications as read: %s", string(body))), nil
 				}
 
 				return mcp.NewToolResultText("Notification marked as done"), nil
