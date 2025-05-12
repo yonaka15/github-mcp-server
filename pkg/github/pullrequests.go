@@ -1730,8 +1730,40 @@ func newGQLStringlike[T ~string](s string) *T {
 	return &stringlike
 }
 
+type requestCopilotReviewArgs struct {
+	Owner      string
+	Repo       string
+	PullNumber int32
+}
+
+// TODO: This, and all the param parsing absolutely does not need the MCP request, it just needs the
+// Argument map. Ideally we would just get the byte array and unmarshal it into the struct but mcp-go
+// doesn't expose that.
+func parseRequestCopilotReviewArgs(request mcp.CallToolRequest) (requestCopilotReviewArgs, error) {
+	owner, err := requiredParam[string](request, "owner")
+	if err != nil {
+		return requestCopilotReviewArgs{}, err
+	}
+
+	repo, err := requiredParam[string](request, "repo")
+	if err != nil {
+		return requestCopilotReviewArgs{}, err
+	}
+
+	pullNumber, err := requiredParam[constrainableInt32](request, "pullNumber")
+	if err != nil {
+		return requestCopilotReviewArgs{}, err
+	}
+
+	return requestCopilotReviewArgs{
+		Owner:      owner,
+		Repo:       repo,
+		PullNumber: int32(pullNumber),
+	}, nil
+}
+
 // RequestCopilotReview creates a tool to request a Copilot review for a pull request.
-func RequestCopilotReview(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func RequestCopilotReview(getClient GetClientFn, t translations.TranslationHelperFunc) (mcp.Tool, server.ToolHandlerFunc) {
 	return mcp.NewTool("request_copilot_review",
 			mcp.WithDescription(t("TOOL_REQUEST_COPILOT_REVIEW_DESCRIPTION", "Request a GitHub Copilot review for a pull request. Note: This feature depends on GitHub API support and may not be available for all users.")),
 			mcp.WithString("owner",
@@ -1742,27 +1774,35 @@ func RequestCopilotReview(getClient GetClientFn, t translations.TranslationHelpe
 				mcp.Required(),
 				mcp.Description("Repository name"),
 			),
-			mcp.WithNumber("pull_number",
+			mcp.WithNumber("pullNumber",
 				mcp.Required(),
 				mcp.Description("Pull request number"),
 			),
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			owner, err := requiredParam[string](request, "owner")
+			args, err := parseRequestCopilotReviewArgs(request)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return nil, err
 			}
-			repo, err := requiredParam[string](request, "repo")
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-			pullNumber, err := RequiredInt(request, "pull_number")
+
+			client, err := getClient(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			// As of now, GitHub API does not support Copilot as a reviewer programmatically.
-			// This is a placeholder for future support.
-			return mcp.NewToolResultError(fmt.Sprintf("Requesting a Copilot review for PR #%d in %s/%s is not currently supported by the GitHub API. Please request a Copilot review via the GitHub UI.", pullNumber, owner, repo)), nil
+			if _, _, err := client.PullRequests.RequestReviewers(
+				ctx,
+				args.Owner,
+				args.Repo,
+				int(args.PullNumber),
+				github.ReviewersRequest{
+					Reviewers: []string{"copilot-pull-request-reviewer[bot]"}, // The login name of the copilot bot.
+				},
+			); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			// Return nothing, just indicate success for the time being.
+			return mcp.NewToolResultText(""), nil
 		}
 }

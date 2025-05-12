@@ -1548,7 +1548,7 @@ func Test_AddPullRequestReviewComment(t *testing.T) {
 
 func Test_RequestCopilotReview(t *testing.T) {
 	mockClient := github.NewClient(nil)
-	tool, handler := RequestCopilotReview(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	tool, handler := RequestCopilotReview(stubGetClientFn(mockClient), nil, translations.NullTranslationHelper)
 
 	assert.Equal(t, "request_copilot_review", tool.Name)
 	assert.NotEmpty(t, tool.Description)
