@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -16,6 +17,7 @@ import (
 	mcplog "github.com/github/github-mcp-server/pkg/log"
 	"github.com/github/github-mcp-server/pkg/translations"
 	gogithub "github.com/google/go-github/v69/github"
+	"github.com/henvic/httpretty"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/shurcooL/githubv4"
@@ -45,6 +47,12 @@ type MCPServerConfig struct {
 
 	// Translator provides translated text for the server tooling
 	Translator translations.TranslationHelperFunc
+
+	// HTTPLogWriter is the writer for HTTP request/response logs, nil means no logging
+	// TODO: In future, this should probably log back to the MCP server via notifications/message so that
+	// remote servers are able to deliver debug logs to the client. For the moment, this is a very
+	// effective solution for debugging stdio.
+	HTTPLogWriter io.Writer
 }
 
 func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
@@ -53,8 +61,32 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 		return nil, fmt.Errorf("failed to parse API host: %w", err)
 	}
 
+	baseTransport := http.DefaultTransport
+
+	if cfg.HTTPLogWriter != nil {
+		httpLogger := &httpretty.Logger{
+			Time:            true,
+			TLS:             true,
+			RequestHeader:   true,
+			RequestBody:     true,
+			ResponseHeader:  true,
+			ResponseBody:    true,
+			Colors:          false, // erase line if you don't like colors
+			Formatters:      []httpretty.Formatter{&httpretty.JSONFormatter{}},
+			MaxResponseBody: 10000,
+		}
+		httpLogger.SetOutput(cfg.HTTPLogWriter)
+		httpLogger.SetBodyFilter(func(h http.Header) (skip bool, err error) {
+			return !inspectableMIMEType(h.Get("Content-Type")), nil
+		})
+		baseTransport = httpLogger.RoundTripper(http.DefaultTransport)
+	}
+
 	// Construct our REST client
-	restClient := gogithub.NewClient(nil).WithAuthToken(cfg.Token)
+	restHTTPClient := &http.Client{
+		Transport: baseTransport,
+	}
+	restClient := gogithub.NewClient(restHTTPClient).WithAuthToken(cfg.Token)
 	restClient.UserAgent = fmt.Sprintf("github-mcp-server/%s", cfg.Version)
 	restClient.BaseURL = apiHost.baseRESTURL
 	restClient.UploadURL = apiHost.uploadURL
@@ -64,7 +96,7 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 	// did the necessary API host parsing so that github.com will return the correct URL anyway.
 	gqlHTTPClient := &http.Client{
 		Transport: &bearerAuthTransport{
-			transport: http.DefaultTransport,
+			transport: baseTransport,
 			token:     cfg.Token,
 		},
 	} // We're going to wrap the Transport later in beforeInit
@@ -169,6 +201,9 @@ type StdioServerConfig struct {
 
 	// Path to the log file if not stderr
 	LogFilePath string
+
+	// LogAPIRequests indicates if we should log API requests to stderr
+	LogAPIRequests bool
 }
 
 // RunStdioServer is not concurrent safe.
@@ -179,6 +214,26 @@ func RunStdioServer(cfg StdioServerConfig) error {
 
 	t, dumpTranslations := translations.TranslationHelper()
 
+	logrusLogger := logrus.New()
+	logLocation := os.Stderr
+	if cfg.LogFilePath != "" {
+		file, err := os.OpenFile(cfg.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+		if err != nil {
+			return fmt.Errorf("failed to open log file: %w", err)
+		}
+		defer func() { _ = file.Close() }()
+
+		logLocation = file
+		logrusLogger.SetLevel(logrus.DebugLevel)
+	}
+	logrusLogger.SetOutput(logLocation)
+	stdLogger := log.New(logrusLogger.Writer(), "stdioserver", 0)
+
+	var httpLogWriter io.Writer
+	if cfg.LogAPIRequests {
+		httpLogWriter = logLocation
+	}
+
 	ghServer, err := NewMCPServer(MCPServerConfig{
 		Version:         cfg.Version,
 		Host:            cfg.Host,
@@ -187,24 +242,13 @@ func RunStdioServer(cfg StdioServerConfig) error {
 		DynamicToolsets: cfg.DynamicToolsets,
 		ReadOnly:        cfg.ReadOnly,
 		Translator:      t,
+		HTTPLogWriter:   httpLogWriter,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create MCP server: %w", err)
 	}
 
 	stdioServer := server.NewStdioServer(ghServer)
-
-	logrusLogger := logrus.New()
-	if cfg.LogFilePath != "" {
-		file, err := os.OpenFile(cfg.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			return fmt.Errorf("failed to open log file: %w", err)
-		}
-
-		logrusLogger.SetLevel(logrus.DebugLevel)
-		logrusLogger.SetOutput(file)
-	}
-	stdLogger := log.New(logrusLogger.Writer(), "stdioserver", 0)
 	stdioServer.SetErrorLogger(stdLogger)
 
 	if cfg.ExportTranslations {
@@ -377,4 +421,12 @@ func (t *bearerAuthTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	req = req.Clone(req.Context())
 	req.Header.Set("Authorization", "Bearer "+t.token)
 	return t.transport.RoundTrip(req)
+}
+
+var jsonTypeRE = regexp.MustCompile(`[/+]json($|;)`)
+
+func inspectableMIMEType(t string) bool {
+	return strings.HasPrefix(t, "text/") ||
+		strings.HasPrefix(t, "application/x-www-form-urlencoded") ||
+		jsonTypeRE.MatchString(t)
 }
