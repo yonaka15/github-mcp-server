@@ -120,7 +120,8 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 
 	// Initialize the content filter if a trusted repo is specified
 	if cfg.TrustedRepo != "" {
-		ctx, err := InitContentFilter(ctx, cfg.TrustedRepo, getGQLClient)
+		var err error
+		ctx, err = github.InitContentFilter(ctx, cfg.TrustedRepo, getGQLClient)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize content filter: %w", err)
 		}
