@@ -94,7 +94,10 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 		OnBeforeInitialize: []server.OnBeforeInitializeFunc{beforeInit},
 	}
 
-	ghServer := github.NewServer(cfg.Version, server.WithHooks(hooks))
+	ghServer := github.NewServerWithConfig(github.ServerConfig{
+		Version:                 cfg.Version,
+		DisableContentFiltering: cfg.DisableContentFiltering,
+	}, server.WithHooks(hooks))
 
 	enabledToolsets := cfg.EnabledToolsets
 	if cfg.DynamicToolsets {
