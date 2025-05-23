@@ -42,10 +42,10 @@ func InitToolsets(passedToolsets []string, readOnly bool, getClient GetClientFn,
 		)
 	issues := toolsets.NewToolset("issues", "GitHub Issues related tools").
 		AddReadTools(
-			toolsets.NewServerTool(GetIssue(getClient, t)),
+			toolsets.NewServerTool(GetIssue(getClient, getGQLClient, t)),
 			toolsets.NewServerTool(SearchIssues(getClient, t)),
 			toolsets.NewServerTool(ListIssues(getClient, t)),
-			toolsets.NewServerTool(GetIssueComments(getClient, t)),
+			toolsets.NewServerTool(GetIssueComments(getClient, getGQLClient, t)),
 		).
 		AddWriteTools(
 			toolsets.NewServerTool(CreateIssue(getClient, t)),

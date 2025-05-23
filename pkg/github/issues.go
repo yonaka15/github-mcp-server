@@ -18,7 +18,7 @@ import (
 )
 
 // GetIssue creates a tool to get details of a specific issue in a GitHub repository.
-func GetIssue(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func GetIssue(getClient GetClientFn, getGQLClient GetGQLClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("get_issue",
 			mcp.WithDescription(t("TOOL_GET_ISSUE_DESCRIPTION", "Get details of a specific issue in a GitHub repository.")),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -68,6 +68,13 @@ func GetIssue(getClient GetClientFn, t translations.TranslationHelperFunc) (tool
 					return nil, fmt.Errorf("failed to read response body: %w", err)
 				}
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get issue: %s", string(body))), nil
+			}
+
+			// Check if content filtering is enabled and user has push access
+			if issue.User != nil && issue.User.Login != nil {
+				if !ShouldIncludeContent(ctx, *issue.User.Login, getGQLClient) {
+					return mcp.NewToolResultError("Content from this user is filtered due to lack of push access to the trusted repository"), nil
+				}
 			}
 
 			r, err := json.Marshal(issue)
@@ -632,7 +639,7 @@ func UpdateIssue(getClient GetClientFn, t translations.TranslationHelperFunc) (t
 }
 
 // GetIssueComments creates a tool to get comments for a GitHub issue.
-func GetIssueComments(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func GetIssueComments(getClient GetClientFn, getGQLClient GetGQLClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("get_issue_comments",
 			mcp.WithDescription(t("TOOL_GET_ISSUE_COMMENTS_DESCRIPTION", "Get comments for a specific issue in a GitHub repository.")),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -705,7 +712,17 @@ func GetIssueComments(getClient GetClientFn, t translations.TranslationHelperFun
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get issue comments: %s", string(body))), nil
 			}
 
-			r, err := json.Marshal(comments)
+			// Filter comments based on user permissions
+			var filteredComments []*github.IssueComment
+			for _, comment := range comments {
+				if comment.User != nil && comment.User.Login != nil {
+					if ShouldIncludeContent(ctx, *comment.User.Login, getGQLClient) {
+						filteredComments = append(filteredComments, comment)
+					}
+				}
+			}
+
+			r, err := json.Marshal(filteredComments)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}

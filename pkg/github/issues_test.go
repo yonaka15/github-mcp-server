@@ -20,7 +20,8 @@ import (
 func Test_GetIssue(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := GetIssue(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	mockGQLClient := githubv4.NewClient(nil)
+	tool, _ := GetIssue(stubGetClientFn(mockClient), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "get_issue", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -84,7 +85,8 @@ func Test_GetIssue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetIssue(stubGetClientFn(client), translations.NullTranslationHelper)
+			mockGQLClient := githubv4.NewClient(nil)
+			_, handler := GetIssue(stubGetClientFn(client), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -992,7 +994,8 @@ func Test_ParseISOTimestamp(t *testing.T) {
 func Test_GetIssueComments(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := GetIssueComments(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	mockGQLClient := githubv4.NewClient(nil)
+	tool, _ := GetIssueComments(stubGetClientFn(mockClient), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "get_issue_comments", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -1092,7 +1095,8 @@ func Test_GetIssueComments(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := GetIssueComments(stubGetClientFn(client), translations.NullTranslationHelper)
+			mockGQLClient := githubv4.NewClient(nil)
+			_, handler := GetIssueComments(stubGetClientFn(client), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
