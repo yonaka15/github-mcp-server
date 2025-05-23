@@ -43,7 +43,7 @@ type MCPServerConfig struct {
 	// ReadOnly indicates if we should only offer read-only tools
 	ReadOnly bool
 
-	// TrustedRepo is a repository in the format "owner/repo" used to limit content 
+	// TrustedRepo is a repository in the format "owner/repo" used to limit content
 	// to users with push access to the specified repo
 	TrustedRepo string
 
@@ -53,7 +53,7 @@ type MCPServerConfig struct {
 
 func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 	ctx := context.Background()
-	
+
 	apiHost, err := parseAPIHost(cfg.Host)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse API host: %w", err)

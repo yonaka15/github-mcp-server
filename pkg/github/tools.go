@@ -43,8 +43,8 @@ func InitToolsets(passedToolsets []string, readOnly bool, getClient GetClientFn,
 	issues := toolsets.NewToolset("issues", "GitHub Issues related tools").
 		AddReadTools(
 			toolsets.NewServerTool(GetIssue(getClient, getGQLClient, t)),
-			toolsets.NewServerTool(SearchIssues(getClient, t)),
-			toolsets.NewServerTool(ListIssues(getClient, t)),
+			toolsets.NewServerTool(SearchIssues(getClient, getGQLClient, t)),
+			toolsets.NewServerTool(ListIssues(getClient, getGQLClient, t)),
 			toolsets.NewServerTool(GetIssueComments(getClient, getGQLClient, t)),
 		).
 		AddWriteTools(
@@ -59,12 +59,12 @@ func InitToolsets(passedToolsets []string, readOnly bool, getClient GetClientFn,
 		)
 	pullRequests := toolsets.NewToolset("pull_requests", "GitHub Pull Request related tools").
 		AddReadTools(
-			toolsets.NewServerTool(GetPullRequest(getClient, t)),
-			toolsets.NewServerTool(ListPullRequests(getClient, t)),
+			toolsets.NewServerTool(GetPullRequest(getClient, getGQLClient, t)),
+			toolsets.NewServerTool(ListPullRequests(getClient, getGQLClient, t)),
 			toolsets.NewServerTool(GetPullRequestFiles(getClient, t)),
 			toolsets.NewServerTool(GetPullRequestStatus(getClient, t)),
-			toolsets.NewServerTool(GetPullRequestComments(getClient, t)),
-			toolsets.NewServerTool(GetPullRequestReviews(getClient, t)),
+			toolsets.NewServerTool(GetPullRequestComments(getClient, getGQLClient, t)),
+			toolsets.NewServerTool(GetPullRequestReviews(getClient, getGQLClient, t)),
 			toolsets.NewServerTool(GetPullRequestDiff(getClient, t)),
 		).
 		AddWriteTools(

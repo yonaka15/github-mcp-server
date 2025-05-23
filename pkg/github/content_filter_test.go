@@ -65,14 +65,14 @@ func Test_ParseOwnerRepo(t *testing.T) {
 
 func Test_IsRepoPrivate(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		ownerRepo OwnerRepo
-		mockData githubv4mock.Matcher
-		want     bool
-		wantErr  bool
+		mockData  githubv4mock.Matcher
+		want      bool
+		wantErr   bool
 	}{
 		{
-			name:     "public repository",
+			name:      "public repository",
 			ownerRepo: OwnerRepo{Owner: "octocat", Repo: "hello-world"},
 			mockData: githubv4mock.NewQueryMatcher(
 				struct {
@@ -94,7 +94,7 @@ func Test_IsRepoPrivate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "private repository",
+			name:      "private repository",
 			ownerRepo: OwnerRepo{Owner: "octocat", Repo: "hello-world"},
 			mockData: githubv4mock.NewQueryMatcher(
 				struct {
@@ -116,7 +116,7 @@ func Test_IsRepoPrivate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "repository not found",
+			name:      "repository not found",
 			ownerRepo: OwnerRepo{Owner: "octocat", Repo: "not-found"},
 			mockData: githubv4mock.NewQueryMatcher(
 				struct {

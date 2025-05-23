@@ -161,7 +161,7 @@ func AddIssueComment(getClient GetClientFn, t translations.TranslationHelperFunc
 }
 
 // SearchIssues creates a tool to search for issues and pull requests.
-func SearchIssues(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func SearchIssues(getClient GetClientFn, getGQLClient GetGQLClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("search_issues",
 			mcp.WithDescription(t("TOOL_SEARCH_ISSUES_DESCRIPTION", "Search for issues in GitHub repositories.")),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -239,7 +239,24 @@ func SearchIssues(getClient GetClientFn, t translations.TranslationHelperFunc) (
 				return mcp.NewToolResultError(fmt.Sprintf("failed to search issues: %s", string(body))), nil
 			}
 
-			r, err := json.Marshal(result)
+			// Filter issues based on user permissions
+			var filteredIssues []*github.Issue
+			for _, issue := range result.Issues {
+				if issue.User != nil && issue.User.Login != nil {
+					if ShouldIncludeContent(ctx, *issue.User.Login, getGQLClient) {
+						filteredIssues = append(filteredIssues, issue)
+					}
+				}
+			}
+
+			// Create a new result with filtered issues
+			filteredResult := &github.IssuesSearchResult{
+				Total:             github.Int(len(filteredIssues)),
+				IncompleteResults: result.IncompleteResults,
+				Issues:            filteredIssues,
+			}
+
+			r, err := json.Marshal(filteredResult)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
@@ -371,7 +388,7 @@ func CreateIssue(getClient GetClientFn, t translations.TranslationHelperFunc) (t
 }
 
 // ListIssues creates a tool to list and filter repository issues
-func ListIssues(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func ListIssues(getClient GetClientFn, getGQLClient GetGQLClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("list_issues",
 			mcp.WithDescription(t("TOOL_LIST_ISSUES_DESCRIPTION", "List issues in a GitHub repository.")),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -483,7 +500,17 @@ func ListIssues(getClient GetClientFn, t translations.TranslationHelperFunc) (to
 				return mcp.NewToolResultError(fmt.Sprintf("failed to list issues: %s", string(body))), nil
 			}
 
-			r, err := json.Marshal(issues)
+			// Filter issues based on user permissions
+			var filteredIssues []*github.Issue
+			for _, issue := range issues {
+				if issue.User != nil && issue.User.Login != nil {
+					if ShouldIncludeContent(ctx, *issue.User.Login, getGQLClient) {
+						filteredIssues = append(filteredIssues, issue)
+					}
+				}
+			}
+
+			r, err := json.Marshal(filteredIssues)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal issues: %w", err)
 			}

@@ -231,7 +231,8 @@ func Test_AddIssueComment(t *testing.T) {
 func Test_SearchIssues(t *testing.T) {
 	// Verify tool definition once
 	mockClient := github.NewClient(nil)
-	tool, _ := SearchIssues(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	mockGQLClient := &githubv4.Client{}
+	tool, _ := SearchIssues(stubGetClientFn(mockClient), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "search_issues", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -346,7 +347,8 @@ func Test_SearchIssues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := SearchIssues(stubGetClientFn(client), translations.NullTranslationHelper)
+			mockGQLClient := &githubv4.Client{}
+			_, handler := SearchIssues(stubGetClientFn(client), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)
@@ -561,7 +563,8 @@ func Test_CreateIssue(t *testing.T) {
 func Test_ListIssues(t *testing.T) {
 	// Verify tool definition
 	mockClient := github.NewClient(nil)
-	tool, _ := ListIssues(stubGetClientFn(mockClient), translations.NullTranslationHelper)
+	mockGQLClient := &githubv4.Client{}
+	tool, _ := ListIssues(stubGetClientFn(mockClient), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 	assert.Equal(t, "list_issues", tool.Name)
 	assert.NotEmpty(t, tool.Description)
@@ -692,7 +695,8 @@ func Test_ListIssues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup client with mock
 			client := github.NewClient(tc.mockedClient)
-			_, handler := ListIssues(stubGetClientFn(client), translations.NullTranslationHelper)
+			mockGQLClient := &githubv4.Client{}
+			_, handler := ListIssues(stubGetClientFn(client), stubGetGQLClientFn(mockGQLClient), translations.NullTranslationHelper)
 
 			// Create call request
 			request := createMCPRequest(tc.requestArgs)

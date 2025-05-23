@@ -29,6 +29,8 @@ type ContentFilterSettings struct {
 	IsPrivate bool
 	// TrustedUsers is a map of users who have been verified to have push access
 	TrustedUsers map[string]bool
+	// AuthenticatedUser is the login name of the authenticated user
+	AuthenticatedUser string
 	// mu protects the TrustedUsers map
 	mu sync.RWMutex
 }
@@ -70,9 +72,9 @@ func InitContentFilter(ctx context.Context, trustedRepo string, getGQLClient Get
 	}
 
 	settings := &ContentFilterSettings{
-		Enabled:     true,
-		TrustedRepo: trustedRepo,
-		OwnerRepo:   ownerRepo,
+		Enabled:      true,
+		TrustedRepo:  trustedRepo,
+		OwnerRepo:    ownerRepo,
 		TrustedUsers: map[string]bool{},
 	}
 
@@ -82,6 +84,18 @@ func InitContentFilter(ctx context.Context, trustedRepo string, getGQLClient Get
 		return ctx, fmt.Errorf("failed to check repository visibility: %w", err)
 	}
 	settings.IsPrivate = isPrivate
+
+	// Get the authenticated user's login name
+	authUserLogin, err := GetAuthenticatedUser(ctx, getGQLClient)
+	if err != nil {
+		// Non-fatal error - we can continue without knowing the authenticated user
+		// Just log the error and continue
+		fmt.Printf("warning: failed to get authenticated user: %v\n", err)
+	} else {
+		settings.AuthenticatedUser = authUserLogin
+		// The authenticated user is always trusted
+		settings.TrustedUsers[authUserLogin] = true
+	}
 
 	return context.WithValue(ctx, contentFilterKey, settings), nil
 }
@@ -139,7 +153,7 @@ func HasPushAccess(ctx context.Context, username string, getGQLClient GetGQLClie
 			Collaborators struct {
 				Edges []struct {
 					Permission githubv4.String
-					Node struct {
+					Node       struct {
 						Login githubv4.String
 					}
 				}
@@ -178,11 +192,37 @@ func HasPushAccess(ctx context.Context, username string, getGQLClient GetGQLClie
 	return hasPush, nil
 }
 
+// GetAuthenticatedUser gets the login name of the authenticated user using GraphQL
+func GetAuthenticatedUser(ctx context.Context, getGQLClient GetGQLClientFn) (string, error) {
+	client, err := getGQLClient(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get GraphQL client: %w", err)
+	}
+
+	var query struct {
+		Viewer struct {
+			Login githubv4.String
+		}
+	}
+
+	err = client.Query(ctx, &query, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to query authenticated user: %w", err)
+	}
+
+	return string(query.Viewer.Login), nil
+}
+
 // ShouldIncludeContent checks if content from a user should be included
 func ShouldIncludeContent(ctx context.Context, username string, getGQLClient GetGQLClientFn) bool {
 	settings, ok := GetContentFilterFromContext(ctx)
 	if !ok || !settings.Enabled || settings.IsPrivate {
 		// If filtering is not enabled or repo is private, include all content
+		return true
+	}
+
+	// Always include content from the authenticated user
+	if settings.AuthenticatedUser != "" && strings.EqualFold(username, settings.AuthenticatedUser) {
 		return true
 	}
 
