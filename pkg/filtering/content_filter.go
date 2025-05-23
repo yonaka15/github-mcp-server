@@ -37,6 +37,12 @@ var (
 
 	// Excessive whitespace (more than 3 consecutive newlines)
 	excessiveWhitespaceRegex = regexp.MustCompile(`\n{4,}`)
+	
+	// Excessive spaces (15 or more consecutive spaces)
+	excessiveSpacesRegex = regexp.MustCompile(` {15,}`)
+	
+	// Excessive tabs (6 or more consecutive tabs)
+	excessiveTabsRegex = regexp.MustCompile(`\t{6,}`)
 )
 
 // Config holds configuration for content filtering
@@ -93,6 +99,12 @@ func FilterContent(input string, cfg *Config) string {
 
 	// Normalize excessive whitespace
 	result = excessiveWhitespaceRegex.ReplaceAllString(result, "\n\n\n")
+	
+	// Normalize excessive spaces
+	result = excessiveSpacesRegex.ReplaceAllString(result, "              ")
+	
+	// Normalize excessive tabs
+	result = excessiveTabsRegex.ReplaceAllString(result, "     ")
 
 	return result
 }

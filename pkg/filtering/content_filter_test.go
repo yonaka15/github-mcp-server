@@ -60,6 +60,18 @@ func TestFilterContent(t *testing.T) {
 			cfg:      DefaultConfig(),
 		},
 		{
+			name:     "Text with excessive spaces",
+			input:    "Normal                               Excessive",
+			expected: "Normal              Excessive",
+			cfg:      DefaultConfig(),
+		},
+		{
+			name:     "Text with excessive tabs",
+			input:    "Normal\t\t\t\t\t\t\t\tExcessive",
+			expected: "Normal     Excessive",
+			cfg:      DefaultConfig(),
+		},
+		{
 			name:     "Text with HTML attributes",
 			input:    "<p data-hidden=\"true\" style=\"display:none\">Hidden paragraph</p>",
 			expected: "<p>Hidden paragraph</p>",
