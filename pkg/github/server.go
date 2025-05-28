@@ -42,6 +42,11 @@ func (s *GitHubMCPServer) GetMCPServer() *server.MCPServer {
 	return s.MCPServer
 }
 
+// GetCompletionHandler returns the completion handler
+func (s *GitHubMCPServer) GetCompletionHandler() CompletionHandlerFunc {
+	return s.completionHandler
+}
+
 // NewGitHubServer creates a new GitHub MCP server with completion support
 func NewGitHubServer(version string, getClient GetClientFn, opts ...server.ServerOption) *GitHubMCPServer {
 	baseServer := NewServer(version, opts...)

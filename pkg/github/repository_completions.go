@@ -45,28 +45,51 @@ func RepositoryCompletionHandler(getClient GetClientFn) CompletionHandlerFunc {
 			}, nil
 		}
 
-		client, err := getClient(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get GitHub client: %w", err)
-		}
-
 		argumentName := request.Params.Argument.Name
 		argumentValue := request.Params.Argument.Value
 
 		switch argumentName {
 		case "owner":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completeOwner(ctx, client, argumentValue)
 		case "repo":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completeRepo(ctx, client, argumentValue, uri)
 		case "branch":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completeBranch(ctx, client, argumentValue, uri)
 		case "sha":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completeCommit(ctx, client, argumentValue, uri)
 		case "tag":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completeTag(ctx, client, argumentValue, uri)
 		case "prNumber":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completePullRequest(ctx, client, argumentValue, uri)
 		case "path":
+			client, err := getClient(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub client: %w", err)
+			}
 			return completePath(ctx, client, argumentValue, uri)
 		default:
 			// Return empty completion for unsupported arguments

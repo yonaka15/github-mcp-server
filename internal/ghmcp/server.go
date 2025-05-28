@@ -192,7 +192,7 @@ func RunStdioServer(cfg StdioServerConfig) error {
 		return fmt.Errorf("failed to create MCP server: %w", err)
 	}
 
-	stdioServer := server.NewStdioServer(ghServer.GetMCPServer())
+	stdioServer := github.NewCompletionAwareStdioServer(ghServer.GetMCPServer(), ghServer.GetCompletionHandler())
 
 	logrusLogger := logrus.New()
 	if cfg.LogFilePath != "" {
