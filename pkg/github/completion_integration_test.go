@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v69/github"
-	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,8 +22,8 @@ func TestGitHubMCPServerCompletionIntegration(t *testing.T) {
 	ghServer := NewGitHubServer("test", getClient)
 	require.NotNil(t, ghServer)
 
-	// Create an in-process client
-	mcpClient, err := client.NewInProcessClient(ghServer.GetMCPServer())
+	// Create an in-process client with our custom GitHubMCPServer transport
+	mcpClient, err := NewInProcessClientWithGitHubServer(ghServer)
 	require.NoError(t, err)
 
 	// Initialize the client
@@ -118,8 +117,8 @@ func TestGitHubMCPServerCompletionCapabilities(t *testing.T) {
 	ghServer := NewGitHubServer("test", getClient)
 	require.NotNil(t, ghServer)
 
-	// Create an in-process client
-	mcpClient, err := client.NewInProcessClient(ghServer.GetMCPServer())
+	// Create an in-process client with our custom GitHubMCPServer transport
+	mcpClient, err := NewInProcessClientWithGitHubServer(ghServer)
 	require.NoError(t, err)
 
 	// Initialize the client

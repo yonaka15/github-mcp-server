@@ -96,15 +96,9 @@ func (s *GitHubMCPServer) handleCompletion(ctx context.Context, id any, message 
 
 // Helper functions for JSON-RPC responses
 func createErrorResponse(id any, code int, message string) mcp.JSONRPCMessage {
-	// Convert id to RequestId type
-	var requestId mcp.RequestId
-	if id != nil {
-		requestId = id.(mcp.RequestId)
-	}
-
 	return mcp.JSONRPCError{
 		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      requestId,
+		ID:      mcp.NewRequestId(id),
 		Error: struct {
 			Code int `json:"code"`
 			Message string `json:"message"`
@@ -117,15 +111,9 @@ func createErrorResponse(id any, code int, message string) mcp.JSONRPCMessage {
 }
 
 func createResponse(id any, result any) mcp.JSONRPCMessage {
-	// Convert id to RequestId type
-	var requestId mcp.RequestId
-	if id != nil {
-		requestId = id.(mcp.RequestId)
-	}
-
 	return mcp.JSONRPCResponse{
 		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      requestId,
+		ID:      mcp.NewRequestId(id),
 		Result:  result,
 	}
 }
