@@ -16,8 +16,8 @@ import (
 	mcplog "github.com/github/github-mcp-server/pkg/log"
 	"github.com/github/github-mcp-server/pkg/translations"
 	gogithub "github.com/google/go-github/v69/github"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 	"github.com/shurcooL/githubv4"
 	"github.com/sirupsen/logrus"
 )
@@ -91,7 +91,15 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 		OnBeforeInitialize: []server.OnBeforeInitializeFunc{beforeInit},
 	}
 
-	ghServer := github.NewServer(cfg.Version, server.WithHooks(hooks))
+	getClient := func(_ context.Context) (*gogithub.Client, error) {
+		return restClient, nil // closing over client
+	}
+
+	getGQLClient := func(_ context.Context) (*githubv4.Client, error) {
+		return gqlClient, nil // closing over client
+	}
+
+	ghServer := github.NewServer(getClient, cfg.Version, server.WithHooks(hooks))
 
 	enabledToolsets := cfg.EnabledToolsets
 	if cfg.DynamicToolsets {
@@ -102,14 +110,6 @@ func NewMCPServer(cfg MCPServerConfig) (*server.MCPServer, error) {
 				enabledToolsets = append(enabledToolsets, toolset)
 			}
 		}
-	}
-
-	getClient := func(_ context.Context) (*gogithub.Client, error) {
-		return restClient, nil // closing over client
-	}
-
-	getGQLClient := func(_ context.Context) (*githubv4.Client, error) {
-		return gqlClient, nil // closing over client
 	}
 
 	// Create default toolsets

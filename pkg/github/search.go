@@ -8,8 +8,8 @@ import (
 
 	"github.com/github/github-mcp-server/pkg/translations"
 	"github.com/google/go-github/v69/github"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // SearchRepositories creates a tool to search for GitHub repositories.

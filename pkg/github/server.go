@@ -6,17 +6,17 @@ import (
 	"fmt"
 
 	"github.com/google/go-github/v69/github"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // NewServer creates a new GitHub MCP server with the specified GH client and logger.
 
-func NewServer(version string, opts ...server.ServerOption) *server.MCPServer {
-	// Add default options
+func NewServer(getClient GetClientFn, version string, opts ...server.ServerOption) *server.MCPServer {
 	defaultOpts := []server.ServerOption{
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, true),
+		server.WithCompletion(RepositoryResourceCompletionHandler(getClient)),
 		server.WithLogging(),
 	}
 	opts = append(defaultOpts, opts...)

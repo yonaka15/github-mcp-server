@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/github/github-mcp-server/pkg/translations"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // GetMe creates a tool to get details of the authenticated user.

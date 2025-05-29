@@ -13,8 +13,8 @@ import (
 
 	"github.com/github/github-mcp-server/pkg/translations"
 	"github.com/google/go-github/v69/github"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // GetRepositoryResourceContent defines the resource template and handler for getting repository content.
@@ -66,7 +66,7 @@ func GetRepositoryResourcePrContent(getClient GetClientFn, t translations.Transl
 func RepositoryResourceContentsHandler(getClient GetClientFn) func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	return func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		// the matcher will give []string with one element
-		// https://github.com/mark3labs/mcp-go/pull/54
+		// https://github.com/sammorrowdrums/mcp-go/pull/54
 		o, ok := request.Params.Arguments["owner"].([]string)
 		if !ok || len(o) == 0 {
 			return nil, errors.New("owner is required")

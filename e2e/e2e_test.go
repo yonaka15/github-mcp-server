@@ -20,8 +20,8 @@ import (
 	"github.com/github/github-mcp-server/pkg/github"
 	"github.com/github/github-mcp-server/pkg/translations"
 	gogithub "github.com/google/go-github/v69/github"
-	mcpClient "github.com/mark3labs/mcp-go/client"
-	"github.com/mark3labs/mcp-go/mcp"
+	mcpClient "github.com/sammorrowdrums/mcp-go/client"
+	"github.com/sammorrowdrums/mcp-go/mcp"
 	"github.com/stretchr/testify/require"
 )
 
