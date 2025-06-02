@@ -10,125 +10,50 @@ import (
 )
 
 // RepositoryResourceCompletionHandler returns a CompletionHandlerFunc for repository resource completions.
+
+// RepositoryResourceCompletionHandler returns a CompletionHandlerFunc for repository resource completions.
 func RepositoryResourceCompletionHandler(getClient GetClientFn) func(ctx context.Context, req mcp.CompleteRequest) (*mcp.CompleteResult, error) {
 	return func(ctx context.Context, req mcp.CompleteRequest) (*mcp.CompleteResult, error) {
 		ref, ok := req.Params.Ref.(map[string]any)
 		if !ok || ref["type"] != "ref/resource" {
 			return nil, nil // Not a resource completion
 		}
-		uri, _ := ref["uri"].(string)
+
 		argName := req.Params.Argument.Name
 		argValue := req.Params.Argument.Value
+		resolved, ok := any(req.Params.Resolved).(map[string]string)
+		if !ok && req.Params.Resolved != nil {
+			return nil, fmt.Errorf(".Resolved must be map[string]string, got %T", req.Params.Resolved)
+		}
+		if resolved == nil {
+			resolved = map[string]string{}
+		}
 
 		client, err := getClient(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		var values []string
-
-		switch argName {
-		case "owner":
-			user, _, err := client.Users.Get(ctx, "")
-			if err == nil && user.GetLogin() != "" {
-				values = append(values, user.GetLogin())
-			}
-			orgs, _, _ := client.Organizations.List(ctx, "", nil)
-			for _, org := range orgs {
-				values = append(values, org.GetLogin())
-			}
-		case "repo":
-			// print the whole mcp complete request for debugging
-			fmt.Printf("MCP Complete Request: %+v\n", req)
-
-			fmt.Printf("URI: %s\n", uri)
-			owner := getArgFromURI(uri, "owner")
-			if owner != "" {
-				repos, _, err := client.Search.Repositories(ctx, fmt.Sprintf("user:%s", owner), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
-				if err != nil || repos == nil {
-					break
-				}
-				for _, repo := range repos.Repositories {
-					if argValue == "" || strings.Contains(repo.GetName(), argValue) {
-						values = append(values, repo.GetName())
-					}
-				}
-			}
-		case "branch":
-			owner := getArgFromURI(uri, "owner")
-			repo := getArgFromURI(uri, "repo")
-			if owner != "" && repo != "" {
-				branches, _, _ := client.Repositories.ListBranches(ctx, owner, repo, nil)
-				for _, branch := range branches {
-					if argValue == "" || strings.Contains(branch.GetName(), argValue) {
-						values = append(values, branch.GetName())
-					}
-				}
-			}
-		case "sha":
-			owner := getArgFromURI(uri, "owner")
-			repo := getArgFromURI(uri, "repo")
-			if owner != "" && repo != "" {
-				commits, _, _ := client.Repositories.ListCommits(ctx, owner, repo, nil)
-				for _, commit := range commits {
-					sha := commit.GetSHA()
-					if argValue == "" || strings.HasPrefix(sha, argValue) {
-						values = append(values, sha)
-					}
-				}
-			}
-		case "tag":
-			owner := getArgFromURI(uri, "owner")
-			repo := getArgFromURI(uri, "repo")
-			if owner != "" && repo != "" {
-				tags, _, _ := client.Repositories.ListTags(ctx, owner, repo, nil)
-				for _, tag := range tags {
-					if argValue == "" || strings.Contains(tag.GetName(), argValue) {
-						values = append(values, tag.GetName())
-					}
-				}
-			}
-		case "prNumber":
-			owner := getArgFromURI(uri, "owner")
-			repo := getArgFromURI(uri, "repo")
-			if owner != "" && repo != "" {
-				prs, _, _ := client.PullRequests.List(ctx, owner, repo, nil)
-				for _, pr := range prs {
-					num := fmt.Sprintf("%d", pr.GetNumber())
-					if argValue == "" || strings.HasPrefix(num, argValue) {
-						values = append(values, num)
-					}
-				}
-			}
-		case "path":
-			owner := getArgFromURI(uri, "owner")
-			repo := getArgFromURI(uri, "repo")
-			refVal := getArgFromURI(uri, "branch")
-			if refVal == "" {
-				refVal = getArgFromURI(uri, "sha")
-			}
-			if refVal == "" {
-				refVal = getArgFromURI(uri, "tag")
-			}
-			if refVal == "" {
-				refVal = "main"
-			}
-			if owner != "" && repo != "" {
-				contents, dirContents, _, _ := client.Repositories.GetContents(ctx, owner, repo, "", &github.RepositoryContentGetOptions{Ref: refVal})
-				if dirContents != nil {
-					for _, entry := range dirContents {
-						if argValue == "" || strings.HasPrefix(entry.GetName(), argValue) {
-							values = append(values, entry.GetName())
-						}
-					}
-				} else if contents != nil {
-					if argValue == "" || strings.HasPrefix(contents.GetName(), argValue) {
-						values = append(values, contents.GetName())
-					}
-				}
-			}
+		// Argument resolver functions
+		resolvers := map[string]func(context.Context, *github.Client, map[string]string, string) ([]string, error){
+			"owner":    completeOwner,
+			"repo":     completeRepo,
+			"branch":   completeBranch,
+			"sha":      completeSHA,
+			"tag":      completeTag,
+			"prNumber": completePRNumber,
+			"path":     completePath,
 		}
 
+		resolver, ok := resolvers[argName]
+		if !ok {
+			return nil, nil // Unknown argument
+		}
+
+		values, err := resolver(ctx, client, resolved, argValue)
+		if err != nil {
+			return nil, err
+		}
 		if len(values) > 100 {
 			values = values[:100]
 		}
@@ -147,14 +72,224 @@ func RepositoryResourceCompletionHandler(getClient GetClientFn) func(ctx context
 	}
 }
 
-func getArgFromURI(uri, name string) string {
-	trimmed := strings.TrimPrefix(uri, "repo://")
-	parts := strings.Split(trimmed, "/")
-	if name == "owner" && len(parts) > 0 && parts[0] != "" {
-		return parts[0]
+// --- Per-argument resolver functions ---
+
+func completeOwner(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	var values []string
+	user, _, err := client.Users.Get(ctx, "")
+	if err == nil && user.GetLogin() != "" {
+		values = append(values, user.GetLogin())
 	}
-	if name == "repo" && len(parts) > 1 && parts[1] != "" {
-		return parts[1]
+	orgs, _, _ := client.Organizations.List(ctx, "", &github.ListOptions{PerPage: 100})
+	for _, org := range orgs {
+		values = append(values, org.GetLogin())
 	}
-	return ""
+	// filter values based on argValue and replace values slice
+	if argValue != "" {
+		var filteredValues []string
+		for _, value := range values {
+			if strings.Contains(value, argValue) {
+				filteredValues = append(filteredValues, value)
+			}
+		}
+		values = filteredValues
+	}
+	if len(values) > 100 {
+		values = values[:100]
+		return values, nil // Limit to 100 results
+	}
+	// Else also do a client.Search.Users()
+	if argValue == "" {
+		return values, nil // No need to search if no argValue
+	}
+	users, _, err := client.Search.Users(ctx, argValue, &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100 - len(values)}})
+	if err != nil || users == nil {
+		return nil, err
+	}
+	for _, user := range users.Users {
+		values = append(values, user.GetLogin())
+	}
+
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completeRepo(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	var values []string
+	owner := resolved["owner"]
+	if owner == "" {
+		return values, nil
+	}
+
+	repos, _, err := client.Search.Repositories(ctx, fmt.Sprintf("org:%s %s in:name", owner, argValue), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
+	if err != nil || repos == nil {
+		return values, nil
+	}
+
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completeBranch(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	var values []string
+	owner := resolved["owner"]
+	repo := resolved["repo"]
+	if owner == "" || repo == "" {
+		return values, nil
+	}
+	branches, _, _ := client.Repositories.ListBranches(ctx, owner, repo, nil)
+
+	for _, branch := range branches {
+		if argValue == "" || strings.Contains(branch.GetName(), argValue) {
+			values = append(values, branch.GetName())
+		}
+	}
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completeSHA(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	var values []string
+	owner := resolved["owner"]
+	repo := resolved["repo"]
+	if owner == "" || repo == "" {
+		return values, nil
+	}
+	commits, _, _ := client.Repositories.ListCommits(ctx, owner, repo, nil)
+
+	for _, commit := range commits {
+		sha := commit.GetSHA()
+		if argValue == "" || strings.HasPrefix(sha, argValue) {
+			values = append(values, sha)
+		}
+	}
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completeTag(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	owner := resolved["owner"]
+	repo := resolved["repo"]
+	if owner == "" || repo == "" {
+		return nil, nil
+	}
+	tags, _, _ := client.Repositories.ListTags(ctx, owner, repo, nil)
+	var values []string
+	for _, tag := range tags {
+		if argValue == "" || strings.Contains(tag.GetName(), argValue) {
+			values = append(values, tag.GetName())
+		}
+	}
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completePRNumber(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	var values []string
+	owner := resolved["owner"]
+	repo := resolved["repo"]
+	if owner == "" || repo == "" {
+		return values, nil
+	}
+	// prs, _, _ := client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{})
+	prs, _, _ := client.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:open is:pr %s", owner, repo, argValue), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
+	for _, pr := range prs.Issues {
+		num := fmt.Sprintf("%d", pr.GetNumber())
+		if argValue == "" || strings.HasPrefix(num, argValue) {
+			values = append(values, num)
+		}
+	}
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
+}
+
+func completePath(ctx context.Context, client *github.Client, resolved map[string]string, argValue string) ([]string, error) {
+	owner := resolved["owner"]
+	repo := resolved["repo"]
+	if owner == "" || repo == "" {
+		return nil, nil
+	}
+	refVal := resolved["branch"]
+	if refVal == "" {
+		refVal = resolved["sha"]
+	}
+	if refVal == "" {
+		refVal = resolved["tag"]
+	}
+	if refVal == "" {
+		refVal = "HEAD"
+	}
+
+	// Determine the prefix to complete (directory path or file path)
+	prefix := argValue
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		lastSlash := strings.LastIndex(prefix, "/")
+		if lastSlash >= 0 {
+			prefix = prefix[:lastSlash+1]
+		} else {
+			prefix = ""
+		}
+	}
+
+	// Get the tree for the ref (recursive)
+	tree, _, err := client.Git.GetTree(ctx, owner, repo, refVal, true)
+	if err != nil || tree == nil {
+		return nil, nil
+	}
+
+	// Collect immediate children of the prefix (both files and directories)
+	children := map[string]struct{}{}
+	prefixLen := len(prefix)
+	for _, entry := range tree.Entries {
+		if !strings.HasPrefix(entry.GetPath(), prefix) {
+			continue
+		}
+		rel := entry.GetPath()[prefixLen:]
+		if rel == "" {
+			continue
+		}
+		// Only immediate children (no deeper paths)
+		slashIdx := strings.Index(rel, "/")
+		if slashIdx >= 0 {
+			// Directory: only add the directory name (with trailing slash)
+			rel = rel[:slashIdx+1]
+		} else {
+			// File: leave as-is
+		}
+		// Optionally filter by argValue (if user is typing after last slash)
+		if argValue != "" {
+			afterSlash := argValue
+			if lastSlash := strings.LastIndex(argValue, "/"); lastSlash >= 0 {
+				afterSlash = argValue[lastSlash+1:]
+			}
+			if afterSlash != "" && !strings.HasPrefix(rel, afterSlash) {
+				continue
+			}
+		}
+		children[rel] = struct{}{}
+	}
+
+	var values []string
+	for name := range children {
+		if name != "" {
+			values = append(values, name)
+		}
+	}
+
+	if len(values) > 100 {
+		values = values[:100]
+	}
+	return values, nil
 }

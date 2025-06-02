@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v69 v69.2.0
 	github.com/josephburnett/jd v1.9.2
 	github.com/migueleliasweb/go-github-mock v1.3.0
-	github.com/sammorrowdrums/mcp-go v0.0.0-20250528234530-f0daf2216052
+	github.com/sammorrowdrums/mcp-go v0.0.0-20250602101733-1a4eb277f6a0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
