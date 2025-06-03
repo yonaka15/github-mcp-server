@@ -255,8 +255,9 @@ func completePath(ctx context.Context, client *github.Client, resolved map[strin
 		return nil, nil
 	}
 
-	// Collect immediate children of the prefix (both files and directories)
-	children := map[string]struct{}{}
+	// Collect immediate children of the prefix (files and directories, no duplicates)
+	dirs := map[string]struct{}{}
+	files := map[string]struct{}{}
 	prefixLen := len(prefix)
 	for _, entry := range tree.Entries {
 		if !strings.HasPrefix(entry.GetPath(), prefix) {
@@ -266,31 +267,56 @@ func completePath(ctx context.Context, client *github.Client, resolved map[strin
 		if rel == "" {
 			continue
 		}
-		// Only immediate children (no deeper paths)
+		// Only immediate children
 		slashIdx := strings.Index(rel, "/")
 		if slashIdx >= 0 {
-			// Directory: only add the directory name (with trailing slash)
-			rel = rel[:slashIdx+1]
+			// Directory: only add the directory name (with trailing slash), prefixed with full path
+			dirName := prefix + rel[:slashIdx+1]
+			dirs[dirName] = struct{}{}
+		} else if entry.GetType() == "blob" {
+			// File: add as-is, prefixed with full path
+			fileName := prefix + rel
+			files[fileName] = struct{}{}
+		}
+	}
+
+	// Optionally filter by argValue (if user is typing after last slash)
+	var filter string
+	if argValue != "" {
+		if lastSlash := strings.LastIndex(argValue, "/"); lastSlash >= 0 {
+			filter = argValue[lastSlash+1:]
 		} else {
-			// File: leave as-is
+			filter = argValue
 		}
-		// Optionally filter by argValue (if user is typing after last slash)
-		if argValue != "" {
-			afterSlash := argValue
-			if lastSlash := strings.LastIndex(argValue, "/"); lastSlash >= 0 {
-				afterSlash = argValue[lastSlash+1:]
-			}
-			if afterSlash != "" && !strings.HasPrefix(rel, afterSlash) {
-				continue
-			}
-		}
-		children[rel] = struct{}{}
 	}
 
 	var values []string
-	for name := range children {
-		if name != "" {
-			values = append(values, name)
+	// Add directories first, then files, both filtered
+	for dir := range dirs {
+		// Only filter on the last segment after the last slash
+		if filter == "" {
+			values = append(values, dir)
+		} else {
+			last := dir
+			if idx := strings.LastIndex(strings.TrimRight(dir, "/"), "/"); idx >= 0 {
+				last = dir[idx+1:]
+			}
+			if strings.HasPrefix(last, filter) {
+				values = append(values, dir)
+			}
+		}
+	}
+	for file := range files {
+		if filter == "" {
+			values = append(values, file)
+		} else {
+			last := file
+			if idx := strings.LastIndex(file, "/"); idx >= 0 {
+				last = file[idx+1:]
+			}
+			if strings.HasPrefix(last, filter) {
+				values = append(values, file)
+			}
 		}
 	}
 
