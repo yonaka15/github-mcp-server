@@ -21,10 +21,7 @@ func RepositoryResourceCompletionHandler(getClient GetClientFn) func(ctx context
 
 		argName := req.Params.Argument.Name
 		argValue := req.Params.Argument.Value
-		resolved, ok := any(req.Params.Resolved).(map[string]string)
-		if !ok && req.Params.Resolved != nil {
-			return nil, fmt.Errorf(".Resolved must be map[string]string, got %T", req.Params.Resolved)
-		}
+		resolved := req.Params.Resolved
 		if resolved == nil {
 			resolved = map[string]string{}
 		}
@@ -123,14 +120,23 @@ func completeRepo(ctx context.Context, client *github.Client, resolved map[strin
 		return values, nil
 	}
 
-	repos, _, err := client.Search.Repositories(ctx, fmt.Sprintf("org:%s %s in:name", owner, argValue), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
+	query := fmt.Sprintf("org:%s", owner)
+
+	if argValue != "" {
+		query = fmt.Sprintf("%s %s", query, argValue)
+	}
+	repos, _, err := client.Search.Repositories(ctx, query, &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
 	if err != nil || repos == nil {
 		return values, nil
 	}
-
-	if len(values) > 100 {
-		values = values[:100]
+	// filter repos based on argValue
+	for _, repo := range repos.Repositories {
+		name := repo.GetName()
+		if argValue == "" || strings.HasPrefix(name, argValue) {
+			values = append(values, name)
+		}
 	}
+
 	return values, nil
 }
 
@@ -144,7 +150,7 @@ func completeBranch(ctx context.Context, client *github.Client, resolved map[str
 	branches, _, _ := client.Repositories.ListBranches(ctx, owner, repo, nil)
 
 	for _, branch := range branches {
-		if argValue == "" || strings.Contains(branch.GetName(), argValue) {
+		if argValue == "" || strings.HasPrefix(branch.GetName(), argValue) {
 			values = append(values, branch.GetName())
 		}
 	}
@@ -202,7 +208,7 @@ func completePRNumber(ctx context.Context, client *github.Client, resolved map[s
 		return values, nil
 	}
 	// prs, _, _ := client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{})
-	prs, _, _ := client.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:open is:pr %s", owner, repo, argValue), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
+	prs, _, _ := client.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:open is:pr", owner, repo), &github.SearchOptions{ListOptions: github.ListOptions{PerPage: 100}})
 	for _, pr := range prs.Issues {
 		num := fmt.Sprintf("%d", pr.GetNumber())
 		if argValue == "" || strings.HasPrefix(num, argValue) {
