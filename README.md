@@ -39,12 +39,9 @@ For MCP Hosts that have been [configured to use the remote GitHub MCP Server](do
   
 ```json
 {
-  "mcp": {
-    "servers": {
-      "github": {
-        "type": "http",
-        "url": "https://api.githubcopilot.com/mcp/"
-      }
+  "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/"
     }
   }
 }
@@ -55,25 +52,12 @@ For MCP Hosts that have been [configured to use the remote GitHub MCP Server](do
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "github": {
-        "type": "http",
-        "url": "https://api.githubcopilot.com/mcp/"
-        "headers": {
-          "Authorization": "Bearer ${input:github_mcp_pat}",
-        }
-      }
+  "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "authorization_token": "<your GitHub PAT>"
     }
-  },
-  "inputs": [
-    {
-      "id": "github_mcp_pat",
-      "type": "promptString",
-      "description": "GitHub Personal Access Token",
-      "password": true
-    }
-  ]
+  }
 }
 ```
 
