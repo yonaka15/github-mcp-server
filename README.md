@@ -29,7 +29,7 @@ The remote GitHub MCP Server is hosted by GitHub and provides the easiest method
 For quick installation, use one of the one-click install buttons above. Once you complete that flow, toggle Agent mode (located by the Copilot Chat text input) and the server will start. Make sure you're using [VS Code 1.101](https://code.visualstudio.com/updates/v1_101) or [later](https://code.visualstudio.com/updates) for remote MCP and OAuth support.
 
 
-To manually configure VS Code, choose the appropriate JSON block from the examples below and add it to your host configuration:
+Alternatively, to manually configure VS Code, choose the appropriate JSON block from the examples below and add it to your host configuration:
 
 <table>
 <tr><th>Using OAuth</th><th>Using a GitHub PAT</th></tr>
