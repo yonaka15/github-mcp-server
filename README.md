@@ -104,7 +104,7 @@ For MCP Hosts that are [Remote MCP-compatible](docs/host-integration.md), choose
   "mcpServers": {
     "github-remote": {
       "url": "https://api.githubcopilot.com/mcp/",
-      "authorization_token": "<your GitHub PAT>"
+      "authorization_token": "Bearer <your GitHub PAT>"
     }
   }
 }
