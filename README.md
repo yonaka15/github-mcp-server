@@ -34,7 +34,8 @@ For MCP Hosts that are [Remote MCP-compatible](docs/host-integration.md), choose
 
 <table>
 <tr><th>Using OAuth</th><th>Using a GitHub PAT</th></tr>
-<tr valign='top'>
+<tr><th align=left colspan=2>Claude Desktop</th></tr>
+<tr valign=top>
 <td>
   
 ```json
