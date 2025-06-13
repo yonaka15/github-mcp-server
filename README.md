@@ -30,7 +30,7 @@ For quick installation, use one of the one-click install buttons above. Once you
 
 ### Usage in other MCP Hosts
 
-For MCP Hosts that have been [configured to use the remote GitHub MCP Server](docs/host-integration.md), add the following JSON block to the host's configuration:
+For MCP Hosts that have been [configured to use the remote GitHub MCP Server](docs/host-integration.md), choose the appropriate JSON block from the examples below and add it to the host's configuration:
 
 <table>
 <tr><th>Using OAuth</th><th>Using a GitHub PAT</th></tr>
