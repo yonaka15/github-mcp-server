@@ -33,9 +33,8 @@ For quick installation, use one of the one-click install buttons above. Once you
 For MCP Hosts that are [Remote MCP-compatible](docs/host-integration.md), choose the appropriate JSON block from the examples below and add it to your host configuration:
 
 <table>
-<tr><th>MCP Host</th><th>Using OAuth</th><th>Using a GitHub PAT</th></tr>
+<tr><th>Using OAuth</th><th>Using a GitHub PAT</th></tr>
 <tr valign='top'>
-<td>Claude Desktop</td>
 <td>
   
 ```json
