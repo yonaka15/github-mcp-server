@@ -428,7 +428,7 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
 
 <details>
 
-<summary>User</summary>
+<summary>Context</summary>
 
 - **get_me** - Get details of the authenticated user
   - No parameters required
@@ -778,7 +778,7 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
 
 <details>
 
-<summary>User</summary>
+<summary>Users</summary>
 
 - **search_users** - Search for GitHub users
   - `q`: Search query (string, required)
