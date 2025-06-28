@@ -589,7 +589,11 @@ func GetFileContents(getClient GetClientFn, getRawClient raw.GetRawClientFn, t t
 						}
 
 						if strings.HasPrefix(contentType, "application") || strings.HasPrefix(contentType, "text") {
-							return mcp.NewToolResult(resultMap), nil
+							r, err := json.Marshal(resultMap)
+							if err != nil {
+								return nil, fmt.Errorf("failed to marshal raw file content response: %w", err)
+							}
+							return mcp.NewToolResultText(string(r)), nil
 						}
 
 						return mcp.NewToolResultResource("successfully downloaded binary file", mcp.BlobResourceContents{
@@ -638,7 +642,11 @@ func getFileContentsFromAPI(ctx context.Context, getClient GetClientFn, owner, r
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to convert file content to map: %s", err)), nil
 		}
-		return mcp.NewToolResult(resultMap), nil
+		r, err := json.Marshal(resultMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal file content response: %w", err)
+		}
+		return mcp.NewToolResultText(string(r)), nil
 	}
 
 	// Handle directory content
