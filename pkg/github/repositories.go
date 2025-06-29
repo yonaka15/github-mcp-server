@@ -469,9 +469,9 @@ func GetFileContents(getClient GetClientFn, getRawClient raw.GetRawClientFn, t t
 				mcp.Description("Accepts optional git sha, if sha is specified it will be used instead of ref"),
 			),
 			mcp.WithBoolean("include_sha",
-			mcp.Description("Whether to return file metadata (including SHA, size, type) instead of raw content"),
+				mcp.Description("Whether to return file metadata (including SHA, size, type) instead of raw content"),
 			),
-	),
+		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			owner, err := RequiredParam[string](request, "owner")
 			if err != nil {
