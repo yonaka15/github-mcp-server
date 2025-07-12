@@ -444,7 +444,7 @@ func CreateRepository(getClient GetClientFn, t translations.TranslationHelperFun
 }
 
 // GetFileContents creates a tool to get the contents of a file or directory from a GitHub repository.
-func GetFileContents(getClient GetClientFn, getRawClient raw.GetRawClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+func GetFileContents(getClient GetClientFn, _ raw.GetRawClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("get_file_contents",
 			mcp.WithDescription(t("TOOL_GET_FILE_CONTENTS_DESCRIPTION", "Get the contents of a file or directory from a GitHub repository")),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
