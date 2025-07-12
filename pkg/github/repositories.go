@@ -2,12 +2,10 @@ package github
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 
 	ghErrors "github.com/github/github-mcp-server/pkg/errors"
@@ -505,62 +503,17 @@ func GetFileContents(getClient GetClientFn, getRawClient raw.GetRawClientFn, t t
 			}
 
 			// If the path is (most likely) not to be a directory, we will
-			// first try to get the raw content from the GitHub raw content API.
+			// try to get the content using the GitHub contents API to include SHA information.
 			if path != "" && !strings.HasSuffix(path, "/") {
-
-				rawClient, err := getRawClient(ctx)
-				if err != nil {
-					return mcp.NewToolResultError("failed to get GitHub raw content client"), nil
-				}
-				resp, err := rawClient.GetRawContent(ctx, owner, repo, path, rawOpts)
-				if err != nil {
-					return mcp.NewToolResultError("failed to get raw repository content"), nil
-				}
-				defer func() {
-					_ = resp.Body.Close()
-				}()
-
-				if resp.StatusCode == http.StatusOK {
-					// If the raw content is found, return it directly
-					body, err := io.ReadAll(resp.Body)
+				opts := &github.RepositoryContentGetOptions{Ref: ref}
+				fileContent, _, resp, err := client.Repositories.GetContents(ctx, owner, repo, path, opts)
+				if err == nil && resp.StatusCode == http.StatusOK && fileContent != nil {
+					defer func() { _ = resp.Body.Close() }()
+					r, err := json.Marshal(fileContent)
 					if err != nil {
-						return mcp.NewToolResultError("failed to read response body"), nil
+						return mcp.NewToolResultError("failed to marshal response"), nil
 					}
-					contentType := resp.Header.Get("Content-Type")
-
-					var resourceURI string
-					switch {
-					case sha != "":
-						resourceURI, err = url.JoinPath("repo://", owner, repo, "sha", sha, "contents", path)
-						if err != nil {
-							return nil, fmt.Errorf("failed to create resource URI: %w", err)
-						}
-					case ref != "":
-						resourceURI, err = url.JoinPath("repo://", owner, repo, ref, "contents", path)
-						if err != nil {
-							return nil, fmt.Errorf("failed to create resource URI: %w", err)
-						}
-					default:
-						resourceURI, err = url.JoinPath("repo://", owner, repo, "contents", path)
-						if err != nil {
-							return nil, fmt.Errorf("failed to create resource URI: %w", err)
-						}
-					}
-
-					if strings.HasPrefix(contentType, "application") || strings.HasPrefix(contentType, "text") {
-						return mcp.NewToolResultResource("successfully downloaded text file", mcp.TextResourceContents{
-							URI:      resourceURI,
-							Text:     string(body),
-							MIMEType: contentType,
-						}), nil
-					}
-
-					return mcp.NewToolResultResource("successfully downloaded binary file", mcp.BlobResourceContents{
-						URI:      resourceURI,
-						Blob:     base64.StdEncoding.EncodeToString(body),
-						MIMEType: contentType,
-					}), nil
-
+					return mcp.NewToolResultText(string(r)), nil
 				}
 			}
 

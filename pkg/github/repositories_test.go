@@ -35,8 +35,7 @@ func Test_GetFileContents(t *testing.T) {
 	assert.Contains(t, tool.InputSchema.Properties, "sha")
 	assert.ElementsMatch(t, tool.InputSchema.Required, []string{"owner", "repo"})
 
-	// Mock response for raw content
-	mockRawContent := []byte("# Test Repository\n\nThis is a test repository.")
+
 
 	// Setup mock directory content for success case
 	mockDirContent := []*github.RepositoryContent{
@@ -67,20 +66,31 @@ func Test_GetFileContents(t *testing.T) {
 		expectStatus   int
 	}{
 		{
-			name: "successful text content fetch",
+			name: "successful file content fetch",
 			mockedClient: mock.NewMockedHTTPClient(
 				mock.WithRequestMatchHandler(
 					mock.GetReposGitRefByOwnerByRepoByRef,
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"ref": "refs/heads/main", "object": {"sha": ""}}`))
+						_, _ = w.Write([]byte(`{"ref": "refs/heads/main", "object": {"sha": "abc123"}}`))
 					}),
 				),
 				mock.WithRequestMatchHandler(
-					raw.GetRawReposContentsByOwnerByRepoByBranchByPath,
+					mock.GetReposContentsByOwnerByRepoByPath,
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-						w.Header().Set("Content-Type", "text/markdown")
-						_, _ = w.Write(mockRawContent)
+						w.WriteHeader(http.StatusOK)
+						fileContent := &github.RepositoryContent{
+							Type:    github.Ptr("file"),
+							Name:    github.Ptr("README.md"),
+							Path:    github.Ptr("README.md"),
+							SHA:     github.Ptr("abc123"),
+							Size:    github.Ptr(42),
+							Content: github.Ptr(base64.StdEncoding.EncodeToString([]byte("# Test Repository\n\nThis is a test repository."))),
+							Encoding: github.Ptr("base64"),
+							HTMLURL: github.Ptr("https://github.com/owner/repo/blob/main/README.md"),
+						}
+						responseBody, _ := json.Marshal(fileContent)
+						_, _ = w.Write(responseBody)
 					}),
 				),
 			),
@@ -91,27 +101,43 @@ func Test_GetFileContents(t *testing.T) {
 				"ref":   "refs/heads/main",
 			},
 			expectError: false,
-			expectedResult: mcp.TextResourceContents{
-				URI:      "repo://owner/repo/refs/heads/main/contents/README.md",
-				Text:     "# Test Repository\n\nThis is a test repository.",
-				MIMEType: "text/markdown",
+			expectedResult: &github.RepositoryContent{
+				Type:    github.Ptr("file"),
+				Name:    github.Ptr("README.md"),
+				Path:    github.Ptr("README.md"),
+				SHA:     github.Ptr("abc123"),
+				Size:    github.Ptr(42),
+				Content: github.Ptr(base64.StdEncoding.EncodeToString([]byte("# Test Repository\n\nThis is a test repository."))),
+				Encoding: github.Ptr("base64"),
+				HTMLURL: github.Ptr("https://github.com/owner/repo/blob/main/README.md"),
 			},
 		},
 		{
-			name: "successful file blob content fetch",
+			name: "successful binary file content fetch",
 			mockedClient: mock.NewMockedHTTPClient(
 				mock.WithRequestMatchHandler(
 					mock.GetReposGitRefByOwnerByRepoByRef,
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"ref": "refs/heads/main", "object": {"sha": ""}}`))
+						_, _ = w.Write([]byte(`{"ref": "refs/heads/main", "object": {"sha": "def456"}}`))
 					}),
 				),
 				mock.WithRequestMatchHandler(
-					raw.GetRawReposContentsByOwnerByRepoByBranchByPath,
+					mock.GetReposContentsByOwnerByRepoByPath,
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-						w.Header().Set("Content-Type", "image/png")
-						_, _ = w.Write(mockRawContent)
+						w.WriteHeader(http.StatusOK)
+						fileContent := &github.RepositoryContent{
+							Type:     github.Ptr("file"),
+							Name:     github.Ptr("test.png"),
+							Path:     github.Ptr("test.png"),
+							SHA:      github.Ptr("def456"),
+							Size:     github.Ptr(1024),
+							Content:  github.Ptr(base64.StdEncoding.EncodeToString([]byte("binary-image-content"))),
+							Encoding: github.Ptr("base64"),
+							HTMLURL:  github.Ptr("https://github.com/owner/repo/blob/main/test.png"),
+						}
+						responseBody, _ := json.Marshal(fileContent)
+						_, _ = w.Write(responseBody)
 					}),
 				),
 			),
@@ -122,10 +148,15 @@ func Test_GetFileContents(t *testing.T) {
 				"ref":   "refs/heads/main",
 			},
 			expectError: false,
-			expectedResult: mcp.BlobResourceContents{
-				URI:      "repo://owner/repo/refs/heads/main/contents/test.png",
-				Blob:     base64.StdEncoding.EncodeToString(mockRawContent),
-				MIMEType: "image/png",
+			expectedResult: &github.RepositoryContent{
+				Type:     github.Ptr("file"),
+				Name:     github.Ptr("test.png"),
+				Path:     github.Ptr("test.png"),
+				SHA:      github.Ptr("def456"),
+				Size:     github.Ptr(1024),
+				Content:  github.Ptr(base64.StdEncoding.EncodeToString([]byte("binary-image-content"))),
+				Encoding: github.Ptr("base64"),
+				HTMLURL:  github.Ptr("https://github.com/owner/repo/blob/main/test.png"),
 			},
 		},
 		{
@@ -151,14 +182,7 @@ func Test_GetFileContents(t *testing.T) {
 						mockResponse(t, http.StatusOK, mockDirContent),
 					),
 				),
-				mock.WithRequestMatchHandler(
-					raw.GetRawReposContentsByOwnerByRepoByPath,
-					expectQueryParams(t, map[string]string{
-						"branch": "main",
-					}).andThen(
-						mockResponse(t, http.StatusNotFound, nil),
-					),
-				),
+
 			),
 			requestArgs: map[string]interface{}{
 				"owner": "owner",
@@ -186,7 +210,7 @@ func Test_GetFileContents(t *testing.T) {
 					}),
 				),
 				mock.WithRequestMatchHandler(
-					raw.GetRawReposContentsByOwnerByRepoByPath,
+					mock.GetReposGitTreesByOwnerByRepoByTreeSha,
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						w.WriteHeader(http.StatusNotFound)
 						_, _ = w.Write([]byte(`{"message": "Not Found"}`))
@@ -227,12 +251,19 @@ func Test_GetFileContents(t *testing.T) {
 			require.NoError(t, err)
 			// Use the correct result helper based on the expected type
 			switch expected := tc.expectedResult.(type) {
-			case mcp.TextResourceContents:
-				textResource := getTextResourceResult(t, result)
-				assert.Equal(t, expected, textResource)
-			case mcp.BlobResourceContents:
-				blobResource := getBlobResourceResult(t, result)
-				assert.Equal(t, expected, blobResource)
+			case *github.RepositoryContent:
+				// File content fetch returns a text result (JSON object)
+				textContent := getTextResult(t, result)
+				var returnedContent github.RepositoryContent
+				err = json.Unmarshal([]byte(textContent.Text), &returnedContent)
+				require.NoError(t, err, "Failed to unmarshal file content result: %v", textContent.Text)
+				assert.Equal(t, *expected.Name, *returnedContent.Name)
+				assert.Equal(t, *expected.Path, *returnedContent.Path)
+				assert.Equal(t, *expected.Type, *returnedContent.Type)
+				assert.Equal(t, *expected.SHA, *returnedContent.SHA)
+				if expected.Content != nil && returnedContent.Content != nil {
+					assert.Equal(t, *expected.Content, *returnedContent.Content)
+				}
 			case []*github.RepositoryContent:
 				// Directory content fetch returns a text result (JSON array)
 				textContent := getTextResult(t, result)
